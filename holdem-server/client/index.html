@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold'em Client</title>
+  <style>
+    :root {
+      --bg: #0d1b16;
+      --bg-soft: #14261f;
+      --panel: rgba(12, 26, 21, 0.9);
+      --line: rgba(212, 186, 127, 0.18);
+      --line-strong: rgba(212, 186, 127, 0.38);
+      --text: #f4f0e3;
+      --muted: #b4b09e;
+      --accent: #d4ba7f;
+      --accent-strong: #f2cf76;
+      --danger: #d96f60;
+      --success: #61bf8d;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "Noto Sans KR", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(212, 186, 127, 0.16), transparent 28%),
+        linear-gradient(180deg, #183127 0%, #0d1b16 45%, #09130f 100%);
+    }
+
+    .shell {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 22px 24px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(13, 27, 22, 0.92), rgba(24, 49, 39, 0.7));
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: 1;
+      letter-spacing: 0.03em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .status-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line-strong);
+      color: var(--accent-strong);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 20px 0;
+    }
+
+    .panel-header h2,
+    .panel-header h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .panel-body {
+      padding: 18px 20px 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      margin-top: 6px;
+      padding: 13px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      outline: none;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+    }
+
+    button {
+      padding: 12px 14px;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #21190a;
+      font-weight: 700;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .ghost {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--line-strong);
+    }
+
+    .danger {
+      background: linear-gradient(135deg, #d96f60, #f08e7f);
+      color: white;
+    }
+
+    .success {
+      background: linear-gradient(135deg, #61bf8d, #88d6a7);
+      color: #0f2418;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .room-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .room-card,
+    .player-card,
+    .log-item,
+    .chat-item {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .room-card strong,
+    .player-card strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .main-stage {
+      display: grid;
+      gap: 18px;
+    }
+
+    .table {
+      padding: 24px;
+      min-height: 620px;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at center, rgba(28, 103, 70, 0.95) 0%, rgba(15, 54, 38, 0.98) 55%, rgba(10, 29, 21, 1) 100%);
+    }
+
+    .table::before {
+      content: "";
+      position: absolute;
+      inset: 24px;
+      border: 2px solid rgba(212, 186, 127, 0.22);
+      border-radius: 999px;
+      pointer-events: none;
+    }
+
+    .table-center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(360px, 64vw);
+      padding: 22px;
+      border-radius: 30px;
+      text-align: center;
+      background: rgba(6, 16, 13, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.03);
+    }
+
+    .pot {
+      font-size: clamp(26px, 3vw, 34px);
+      font-weight: 800;
+      color: var(--accent-strong);
+      margin-bottom: 8px;
+    }
+
+    .community {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .seat-layer {
+      position: relative;
+      min-height: 560px;
+    }
+
+    .player-seat {
+      position: absolute;
+      width: min(220px, 42vw);
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(7, 17, 14, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .player-seat.me {
+      border-color: rgba(242, 207, 118, 0.7);
+      box-shadow: 0 0 0 1px rgba(242, 207, 118, 0.4), 0 12px 25px rgba(0, 0, 0, 0.25);
+    }
+
+    .player-seat.turn {
+      outline: 2px solid rgba(97, 191, 141, 0.8);
+    }
+
+    .player-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .tag-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .tag {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--muted);
+    }
+
+    .tag.host,
+    .tag.dealer {
+      color: var(--accent-strong);
+      border-color: rgba(242, 207, 118, 0.3);
+    }
+
+    .tag.turn {
+      color: #b5ffd1;
+      border-color: rgba(97, 191, 141, 0.35);
+    }
+
+    .tag.offline,
+    .tag.folded {
+      color: #ffc1b8;
+      border-color: rgba(217, 111, 96, 0.35);
+    }
+
+    .cards {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      width: 58px;
+      height: 78px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(236, 232, 223, 0.95));
+      color: #1f1b15;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 7px;
+      font-weight: 800;
+      box-shadow: 0 8px 14px rgba(0, 0, 0, 0.18);
+    }
+
+    .card.back {
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.08), transparent 30%),
+        linear-gradient(135deg, #8d1e24, #461016);
+      color: #f5e8da;
+    }
+
+    .card.empty {
+      background: rgba(255, 255, 255, 0.04);
+      border-style: dashed;
+      box-shadow: none;
+      color: var(--muted);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr;
+      gap: 18px;
+    }
+
+    .action-row,
+    .emote-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .raise-box {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 12px;
+    }
+
+    .logs,
+    .chat-log {
+      display: grid;
+      gap: 8px;
+      max-height: 220px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .notice {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+    }
+
+    .top-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .stat b {
+      display: block;
+      font-size: 20px;
+      margin-top: 4px;
+      color: var(--accent-strong);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+      .layout,
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .shell {
+        padding: 14px;
+      }
+
+      .hero {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .split,
+      .top-stats,
+      .action-row,
+      .emote-row {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .table {
+        min-height: 760px;
+        padding: 18px;
+      }
+
+      .player-seat {
+        position: static;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      .seat-layer {
+        min-height: auto;
+        display: grid;
+        gap: 10px;
+        margin-top: 240px;
+      }
+
+      .table-center {
+        top: 150px;
+        width: calc(100% - 24px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div>
+        <h1>Texas Hold'em</h1>
+        <p>멀티플레이 텍사스 홀덤 게임</p>
+      </div>
+      <div class="status-pill" id="connectionStatus">연결 준비 중</div>
+    </section>
+
+    <div class="layout">
+      <aside class="stack">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>로비</h2>
+            <button id="refreshRoomsBtn" class="ghost">새로고침</button>
+          </div>
+          <div class="panel-body stack">
+            <label>
+              플레이어 이름
+              <input id="nameInput" type="text" maxlength="20" placeholder="닉네임 입력">
+            </label>
+            <div class="split">
+              <button id="createRoomBtn">방 만들기</button>
+              <button id="joinRoomBtn" class="ghost">방 입장</button>
+            </div>
+            <label>
+              방 코드
+              <input id="roomCodeInput" type="text" maxlength="8" placeholder="예: A7KQ">
+            </label>
+            <div>
+              <div class="meta">대기 중인 방</div>
+              <div class="room-list" id="roomList"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>내 상태</h2>
+          </div>
+          <div class="panel-body">
+            <div class="stack" id="sessionInfo">
+              <div class="notice">방에 입장하면 여기에 내 정보가 표시됩니다.</div>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <main class="main-stage">
+        <section class="panel table">
+          <div class="table-center">
+            <div class="pot" id="potLabel">POT 0</div>
+            <div class="meta" id="tableStatus">연결 후 방을 만들거나 입장하세요.</div>
+            <div class="community" id="communityCards"></div>
+            <div class="footer-note" id="roundResult"></div>
+          </div>
+          <div class="seat-layer" id="seatLayer"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-body">
+            <div class="top-stats">
+              <div class="stat">방 코드<b id="statRoom">-</b></div>
+              <div class="stat">페이즈<b id="statPhase">LOBBY</b></div>
+              <div class="stat">현재 베팅<b id="statCurrentBet">0</b></div>
+              <div class="stat">남은 시간<b id="statTurnTime">-</b></div>
+            </div>
+
+            <div class="controls-grid">
+              <div class="stack">
+                <div class="action-row">
+                  <button id="foldBtn" class="danger">폴드</button>
+                  <button id="checkBtn" class="ghost">체크</button>
+                  <button id="callBtn" class="ghost">콜</button>
+                  <button id="allinBtn" class="ghost">올인</button>
+                  <button id="readyBtn" class="success">준비</button>
+                </div>
+                <div class="raise-box">
+                  <label>
+                    레이즈 금액
+                    <input id="raiseInput" type="number" min="0" step="25" value="50">
+                  </label>
+                  <button id="raiseBtn">레이즈</button>
+                </div>
+                <div class="split">
+                  <button id="startMultiBtn">멀티 시작</button>
+                  <button id="startSoloBtn" class="ghost">솔로 시작</button>
+                </div>
+                <div class="split">
+                  <button id="nextRoundBtn" class="success">다음 라운드</button>
+                  <button id="leaveBtn" class="ghost">방 나가기</button>
+                </div>
+                <div>
+                  <div class="meta">이모트</div>
+                  <div class="emote-row">
+                    <button class="ghost emote-btn" data-emote="🔥">🔥</button>
+                    <button class="ghost emote-btn" data-emote="😂">😂</button>
+                    <button class="ghost emote-btn" data-emote="😎">😎</button>
+                    <button class="ghost emote-btn" data-emote="👏">👏</button>
+                    <button class="ghost emote-btn" data-emote="😭">😭</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stack">
+                <div>
+                  <div class="panel-header" style="padding: 0 0 10px;">
+                    <h3>최근 액션</h3>
+                  </div>
+                  <div class="logs" id="actionLog">
+                    <div class="notice">아직 액션 로그가 없습니다.</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="panel-header" style="padding: 0 0 10px;">
+                    <h3>채팅</h3>
+                  </div>
+                  <div class="chat-log" id="chatLog">
+                    <div class="notice">채팅이 여기에 표시됩니다.</div>
+                  </div>
+                  <div class="raise-box">
+                    <label>
+                      메시지
+                      <input id="chatInput" type="text" maxlength="100" placeholder="최대 100자">
+                    </label>
+                    <button id="chatSendBtn" class="ghost">전송</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const WS_URL = window.location.protocol === 'https:'
+      ? 'wss://holdem-xxx.onrender.com'
+      : 'ws://localhost:8080';
+
+    const state = {
+      ws: null,
+      connected: false,
+      playerId: '',
+      playerName: '',
+      roomId: '',
+      lobbyState: null,
+      gameState: null,
+      rooms: [],
+      chats: [],
+      lastError: '',
+    };
+
+    const seatsDesktop = [
+      { left: '50%', top: '82%', transform: 'translate(-50%, -50%)' },
+      { left: '15%', top: '62%', transform: 'translate(-50%, -50%)' },
+      { left: '15%', top: '23%', transform: 'translate(-50%, -50%)' },
+      { left: '85%', top: '23%', transform: 'translate(-50%, -50%)' },
+      { left: '85%', top: '62%', transform: 'translate(-50%, -50%)' },
+    ];
+
+    const el = {
+      connectionStatus: document.getElementById('connectionStatus'),
+      nameInput: document.getElementById('nameInput'),
+      roomCodeInput: document.getElementById('roomCodeInput'),
+      roomList: document.getElementById('roomList'),
+      sessionInfo: document.getElementById('sessionInfo'),
+      potLabel: document.getElementById('potLabel'),
+      tableStatus: document.getElementById('tableStatus'),
+      communityCards: document.getElementById('communityCards'),
+      roundResult: document.getElementById('roundResult'),
+      seatLayer: document.getElementById('seatLayer'),
+      statRoom: document.getElementById('statRoom'),
+      statPhase: document.getElementById('statPhase'),
+      statCurrentBet: document.getElementById('statCurrentBet'),
+      statTurnTime: document.getElementById('statTurnTime'),
+      actionLog: document.getElementById('actionLog'),
+      chatLog: document.getElementById('chatLog'),
+      raiseInput: document.getElementById('raiseInput'),
+      chatInput: document.getElementById('chatInput'),
+      refreshRoomsBtn: document.getElementById('refreshRoomsBtn'),
+      createRoomBtn: document.getElementById('createRoomBtn'),
+      joinRoomBtn: document.getElementById('joinRoomBtn'),
+      foldBtn: document.getElementById('foldBtn'),
+      checkBtn: document.getElementById('checkBtn'),
+      callBtn: document.getElementById('callBtn'),
+      allinBtn: document.getElementById('allinBtn'),
+      readyBtn: document.getElementById('readyBtn'),
+      raiseBtn: document.getElementById('raiseBtn'),
+      startMultiBtn: document.getElementById('startMultiBtn'),
+      startSoloBtn: document.getElementById('startSoloBtn'),
+      nextRoundBtn: document.getElementById('nextRoundBtn'),
+      leaveBtn: document.getElementById('leaveBtn'),
+      chatSendBtn: document.getElementById('chatSendBtn'),
+      emoteBtns: Array.from(document.querySelectorAll('.emote-btn')),
+    };
+
+    function connect() {
+      const url = WS_URL.trim();
+      if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        state.ws.close();
+      }
+
+      setConnectionStatus('연결 중...', false);
+      const ws = new WebSocket(url);
+      state.ws = ws;
+
+      ws.addEventListener('open', () => {
+        state.connected = true;
+        setConnectionStatus('연결됨', true);
+        send({ type: 'LIST_ROOMS' });
+      });
+
+      ws.addEventListener('close', () => {
+        state.connected = false;
+        setConnectionStatus('연결 끊김', false);
+      });
+
+      ws.addEventListener('error', () => {
+        toast('서버 연결에 실패했습니다.');
+      });
+
+      ws.addEventListener('message', (event) => {
+        try {
+          handleMessage(JSON.parse(event.data));
+        } catch (error) {
+          console.error(error);
+        }
+      });
+    }
+
+    function disconnect() {
+      if (state.ws) state.ws.close();
+    }
+
+    function send(payload) {
+      if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+        toast('연결이 아직 준비되지 않았습니다.');
+        return;
+      }
+      state.ws.send(JSON.stringify(payload));
+    }
+
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'ROOM_LIST':
+          state.rooms = msg.rooms || [];
+          renderRooms();
+          break;
+        case 'ROOM_JOINED':
+          state.playerId = msg.playerId;
+          state.roomId = msg.roomId;
+          state.playerName = el.nameInput.value.trim();
+          state.chats = [];
+          appendChat('system', `방 ${msg.roomId}에 입장했습니다.`);
+          renderSession();
+          break;
+        case 'LOBBY_STATE':
+          state.lobbyState = msg.state;
+          state.gameState = null;
+          renderAll();
+          break;
+        case 'GAME_STATE':
+          state.gameState = msg.state;
+          state.lobbyState = null;
+          renderAll();
+          break;
+        case 'CHAT':
+          appendChat(msg.from, msg.text);
+          break;
+        case 'EMOTE':
+          appendChat('emote', `${msg.from}: ${msg.emote}`);
+          break;
+        case 'ERROR':
+          toast(msg.message || '오류가 발생했습니다.');
+          break;
+        default:
+          console.log('unknown message', msg);
+      }
+    }
+
+    function setConnectionStatus(text, ok) {
+      el.connectionStatus.textContent = text;
+      el.connectionStatus.style.color = ok ? '#b5ffd1' : '#f2cf76';
+      el.connectionStatus.style.borderColor = ok
+        ? 'rgba(97, 191, 141, 0.35)'
+        : 'rgba(242, 207, 118, 0.35)';
+    }
+
+    function toast(message) {
+      state.lastError = message;
+      el.tableStatus.textContent = message;
+    }
+
+    function appendChat(from, text) {
+      state.chats.push({ from, text, ts: Date.now() });
+      if (state.chats.length > 50) state.chats.shift();
+      renderChat();
+    }
+
+    function renderAll() {
+      renderSession();
+      renderTable();
+      renderControls();
+      renderLogs();
+      renderChat();
+    }
+
+    function renderRooms() {
+      if (!state.rooms.length) {
+        el.roomList.innerHTML = '<div class="notice">대기 중인 방이 없습니다.</div>';
+        return;
+      }
+
+      el.roomList.innerHTML = state.rooms.map((room) => `
+        <div class="room-card">
+          <strong>${room.roomId}</strong>
+          <div class="meta">플레이어 ${room.playerCount}/${room.maxPlayers}</div>
+          <div class="meta">호스트 ${escapeHtml(room.hostName || '-')}</div>
+          <div style="margin-top:10px;">
+            <button class="ghost" onclick="joinRoomByCode('${room.roomId}')">이 방 입장</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderSession() {
+      const current = getCurrentState();
+      if (!state.roomId) {
+        el.sessionInfo.innerHTML = '<div class="notice">방에 입장하면 여기에 내 정보가 표시됩니다.</div>';
+        return;
+      }
+
+      const me = current?.players?.find((player) => player.id === state.playerId);
+      const mode = current?.gameMode === 'solo' ? '솔로' : '멀티';
+      el.sessionInfo.innerHTML = `
+        <div class="player-card">
+          <strong>${escapeHtml(state.playerName || me?.name || '플레이어')}</strong>
+          <div class="meta">내 ID: ${escapeHtml(state.playerId || '-')}</div>
+          <div class="meta">방 코드: ${escapeHtml(state.roomId || '-')}</div>
+          <div class="meta">칩: ${me?.chips ?? '-'}</div>
+          <div class="meta">모드: ${mode}</div>
+        </div>
+      `;
+    }
+
+    function renderTable() {
+      const current = getCurrentState();
+      const phase = current?.phase || 'lobby';
+      const pot = current?.pot || 0;
+      const players = current?.players || [];
+      const community = current?.community || [];
+      const isLobby = phase === 'lobby';
+
+      el.potLabel.textContent = `POT ${pot}`;
+      el.statRoom.textContent = state.roomId || '-';
+      el.statPhase.textContent = phase.toUpperCase();
+      el.statCurrentBet.textContent = current?.currentBet ?? 0;
+      el.statTurnTime.textContent = current?.turnTimeLeft ?? '-';
+
+      if (isLobby && state.lobbyState) {
+        el.tableStatus.textContent = '로비에서 준비 상태를 맞추고 게임을 시작하세요.';
+      } else if (current?.isMyTurn) {
+        el.tableStatus.textContent = '당신 차례입니다.';
+      } else if (current?.players?.[current.currentIdx]) {
+        el.tableStatus.textContent = `${current.players[current.currentIdx].name} 차례입니다.`;
+      } else {
+        el.tableStatus.textContent = '게임 상태를 기다리는 중입니다.';
+      }
+
+      el.communityCards.innerHTML = community.length
+        ? community.map(renderCard).join('')
+        : '<div class="card empty">공용 카드 대기</div>';
+
+      if (current?.lastRoundResult?.payouts?.length) {
+        const summary = current.lastRoundResult.payouts
+          .map((item) => `${item.player.name} +${item.amount}`)
+          .join(' / ');
+        el.roundResult.textContent = `라운드 결과: ${summary}`;
+      } else {
+        el.roundResult.textContent = '';
+      }
+
+      renderSeats(players);
+    }
+
+    function renderSeats(players) {
+      if (!players.length) {
+        el.seatLayer.innerHTML = '<div class="notice">참여 중인 플레이어가 없습니다.</div>';
+        return;
+      }
+
+      const isMobile = window.matchMedia('(max-width: 720px)').matches;
+      el.seatLayer.innerHTML = players.map((player, index) => {
+        const seatStyle = isMobile
+          ? ''
+          : Object.entries(seatsDesktop[index] || seatsDesktop[0])
+              .map(([key, value]) => `${key}:${value}`)
+              .join(';');
+
+        const tags = [];
+        if (player.id === state.playerId) tags.push('<span class="tag">ME</span>');
+        if (player.isHost) tags.push('<span class="tag host">HOST</span>');
+        if (player.isDealer) tags.push('<span class="tag dealer">DEALER</span>');
+        if (player.isCurrentActor) tags.push('<span class="tag turn">TURN</span>');
+        if (player.folded) tags.push('<span class="tag folded">FOLDED</span>');
+        if (!player.connected) tags.push('<span class="tag offline">OFFLINE</span>');
+        if (player.allIn) tags.push('<span class="tag">ALL-IN</span>');
+        if (player.isAI) tags.push('<span class="tag">AI</span>');
+
+        const hand = Array.isArray(player.hand) && player.hand.length
+          ? player.hand.map(renderCard).join('')
+          : '<div class="card empty">대기</div><div class="card empty">대기</div>';
+
+        return `
+          <div class="player-seat ${player.id === state.playerId ? 'me' : ''} ${player.isCurrentActor ? 'turn' : ''}" style="${seatStyle}">
+            <div class="player-top">
+              <div class="avatar">${escapeHtml(player.avatar || '🙂')}</div>
+              <div>
+                <strong>${escapeHtml(player.name)}</strong>
+                <div class="meta">칩 ${player.chips} / 베팅 ${player.bet}</div>
+                <div class="tag-row">${tags.join('')}</div>
+              </div>
+            </div>
+            <div class="cards">${hand}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderLogs() {
+      const current = state.gameState;
+      const logs = current?.lastActions || [];
+      if (!logs.length) {
+        el.actionLog.innerHTML = '<div class="notice">아직 액션 로그가 없습니다.</div>';
+        return;
+      }
+
+      el.actionLog.innerHTML = logs.slice().reverse().map((log) => `
+        <div class="log-item">
+          <strong>${escapeHtml(log.actor)}</strong>
+          <div class="meta">${escapeHtml(log.action)}${log.amount ? ` / ${log.amount}` : ''}${log.auto ? ' / 자동 처리' : ''}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderChat() {
+      if (!state.chats.length) {
+        el.chatLog.innerHTML = '<div class="notice">채팅이 여기에 표시됩니다.</div>';
+        return;
+      }
+
+      el.chatLog.innerHTML = state.chats.slice().reverse().map((item) => `
+        <div class="chat-item">
+          <strong>${escapeHtml(item.from)}</strong>
+          <div>${escapeHtml(item.text)}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderControls() {
+      const current = getCurrentState();
+      const inRoom = Boolean(state.roomId);
+      const isLobby = current?.phase === 'lobby';
+      const me = current?.players?.find((player) => player.id === state.playerId);
+      const myBet = me?.bet ?? 0;
+      const currentBet = current?.currentBet ?? 0;
+      const callAmount = Math.max(0, currentBet - myBet);
+      const isHost = Boolean(me?.isHost || state.lobbyState?.hostId === state.playerId || current?.hostId === state.playerId);
+      const myTurn = Boolean(current?.isMyTurn);
+
+      el.readyBtn.disabled = !inRoom || !isLobby;
+      el.startMultiBtn.disabled = !inRoom || !isLobby || !isHost;
+      el.startSoloBtn.disabled = !inRoom || !isLobby || !isHost;
+      el.nextRoundBtn.disabled = !inRoom || current?.phase !== 'showdown' || !isHost;
+      el.leaveBtn.disabled = !inRoom;
+
+      el.foldBtn.disabled = !myTurn || isLobby;
+      el.checkBtn.disabled = !myTurn || isLobby;
+      el.callBtn.disabled = !myTurn || isLobby || callAmount <= 0;
+      el.raiseBtn.disabled = !myTurn || isLobby;
+      el.allinBtn.disabled = !myTurn || isLobby;
+
+      el.callBtn.textContent = callAmount > 0 ? `콜 ${callAmount}` : '콜';
+      el.readyBtn.textContent = me?.isReady ? '준비 해제' : '준비';
+    }
+
+    function getCurrentState() {
+      return state.gameState || state.lobbyState || null;
+    }
+
+    function renderCard(card) {
+      if (!card) return '<div class="card back"><span>H</span><span>OLD</span></div>';
+      const suit = card.suit || '?';
+      const rank = card.rank || '?';
+      return `<div class="card"><span>${escapeHtml(rank)}</span><span>${escapeHtml(suit)}</span></div>`;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function requireName() {
+      const name = el.nameInput.value.trim();
+      if (!name) {
+        toast('플레이어 이름을 입력하세요.');
+        return '';
+      }
+      return name;
+    }
+
+    function createRoom() {
+      const playerName = requireName();
+      if (!playerName) return;
+      send({ type: 'CREATE_ROOM', playerName });
+    }
+
+    function joinRoom() {
+      const playerName = requireName();
+      const roomId = el.roomCodeInput.value.trim().toUpperCase();
+      if (!playerName || !roomId) {
+        toast('이름과 방 코드를 입력하세요.');
+        return;
+      }
+      send({ type: 'JOIN_ROOM', playerName, roomId });
+    }
+
+    window.joinRoomByCode = function joinRoomByCode(roomId) {
+      el.roomCodeInput.value = roomId;
+      joinRoom();
+    };
+
+    function sendAction(action, amount = 0) {
+      send({ type: 'ACTION', action, amount });
+    }
+
+    function toggleReady() {
+      const current = getCurrentState();
+      const me = current?.players?.find((player) => player.id === state.playerId);
+      send({ type: 'SET_READY', ready: !me?.isReady });
+    }
+
+    function sendChat() {
+      const text = el.chatInput.value.trim();
+      if (!text) return;
+      send({ type: 'CHAT', text });
+      el.chatInput.value = '';
+    }
+
+    function leaveRoom() {
+      send({ type: 'LEAVE_ROOM' });
+      state.roomId = '';
+      state.playerId = '';
+      state.lobbyState = null;
+      state.gameState = null;
+      renderAll();
+      send({ type: 'LIST_ROOMS' });
+    }
+
+    el.refreshRoomsBtn.addEventListener('click', () => send({ type: 'LIST_ROOMS' }));
+    el.createRoomBtn.addEventListener('click', createRoom);
+    el.joinRoomBtn.addEventListener('click', joinRoom);
+    el.foldBtn.addEventListener('click', () => sendAction('fold'));
+    el.checkBtn.addEventListener('click', () => sendAction('check'));
+    el.callBtn.addEventListener('click', () => sendAction('call'));
+    el.allinBtn.addEventListener('click', () => sendAction('allin'));
+    el.raiseBtn.addEventListener('click', () => sendAction('raise', Number(el.raiseInput.value) || 0));
+    el.readyBtn.addEventListener('click', toggleReady);
+    el.startMultiBtn.addEventListener('click', () => send({ type: 'START_GAME', mode: 'multi' }));
+    el.startSoloBtn.addEventListener('click', () => send({ type: 'START_GAME', mode: 'solo' }));
+    el.nextRoundBtn.addEventListener('click', () => send({ type: 'NEXT_ROUND' }));
+    el.leaveBtn.addEventListener('click', leaveRoom);
+    el.chatSendBtn.addEventListener('click', sendChat);
+    el.chatInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') sendChat();
+    });
+    el.emoteBtns.forEach((button) => {
+      button.addEventListener('click', () => {
+        send({ type: 'EMOTE', emote: button.dataset.emote });
+      });
+    });
+
+    renderRooms();
+    renderAll();
+    connect();
+  </script>
+</body>
+</html>
