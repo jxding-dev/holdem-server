@@ -1,0 +1,2586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0d12">
+<title>Hold'em Club</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   DESIGN TOKENS
+   색상 4개: bg / surface / gold / green
+   나머지는 파생값
+═══════════════════════════════════════════════ */
+:root {
+  /* base */
+  --bg:        #0a0d12;
+  --bg-raised:  #0f1318;
+  --surface:    #141b24;
+  --surface-2:  #1a2433;
+  --surface-3:  #1f2d40;
+  --border:     #1e2d3e;
+  --border-dim: #162030;
+
+  /* felt */
+  --felt:       #0b3d22;
+  --felt-inner: #0d4426;
+  --felt-rim:   #07271a;
+
+  /* accent - gold (primary CTA, cards, chips) */
+  --gold:       #c8923a;
+  --gold-lt:    #e0ab54;
+  --gold-dim:   rgba(200,146,58,.15);
+  --gold-glow:  rgba(200,146,58,.25);
+
+  /* accent - green (my turn, win) */
+  --green:      #27ae60;
+  --green-lt:   #2ecc71;
+  --green-dim:  rgba(39,174,96,.15);
+
+  /* accent - red (fold, lose) */
+  --red:        #c0392b;
+  --red-lt:     #e74c3c;
+  --red-dim:    rgba(192,57,43,.15);
+
+  /* accent - blue (call, info) */
+  --blue:       #2980b9;
+  --blue-lt:    #3498db;
+
+  /* text */
+  --text:       #dce8f0;
+  --text-2:     #7a93aa;
+  --text-3:     #3d5470;
+
+  /* radius */
+  --r-sm: 8px;
+  --r:    12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+
+  /* shadow */
+  --shadow-card: 0 8px 24px rgba(0,0,0,.65), 0 2px 6px rgba(0,0,0,.4);
+  --shadow-up:   0 -4px 20px rgba(0,0,0,.4);
+}
+
+/* ═══════════════════════════════════════════════
+   RESET
+═══════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+button { cursor: pointer; font-family: inherit; border: none; }
+input  { font-family: inherit; }
+
+/* ═══════════════════════════════════════════════
+   SCREEN ROUTER
+═══════════════════════════════════════════════ */
+.screen { display: none; min-height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+#toast {
+  position: fixed; top: 16px; left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-size: .85rem; font-weight: 600;
+  z-index: 9999; opacity: 0;
+  transition: transform .3s cubic-bezier(.34,1.5,.64,1), opacity .25s;
+  pointer-events: none;
+  white-space: pre-line;
+  max-width: 90vw; text-align: center;
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+#toast.ok   { border-color: var(--green); color: var(--green-lt); }
+#toast.warn { border-color: var(--gold);  color: var(--gold-lt); }
+#toast.err  { border-color: var(--red);   color: var(--red-lt); }
+
+/* ═══════════════════════════════════════════════
+   ① HOME SCREEN
+   원칙: 선택지 2개만. 나머지 없음.
+═══════════════════════════════════════════════ */
+#screen-home {
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -5%,
+      rgba(200,146,58,.08) 0%, transparent 65%);
+}
+
+.home-inner {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 로고: 작고 절제됨 */
+.home-logo {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  font-weight: 900;
+  color: var(--gold-lt);
+  letter-spacing: 4px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.home-logo-sub {
+  font-size: .72rem;
+  color: var(--text-3);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+/* 버튼 2개 */
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+/* PRIMARY: 솔로 플레이 */
+.btn-home-primary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--felt-inner);
+  border: 1px solid var(--gold);
+  border-radius: var(--r-lg);
+  color: var(--text);
+  text-align: left;
+  width: 100%;
+  transition: background .2s, box-shadow .2s, transform .15s;
+}
+.btn-home-primary:hover {
+  background: #0e4a2a;
+  box-shadow: 0 0 0 1px var(--gold), 0 8px 24px var(--gold-glow);
+  transform: translateY(-1px);
+}
+.btn-home-primary:active { transform: translateY(0); }
+
+/* SECONDARY: 멀티플레이 */
+.btn-home-secondary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  color: var(--text);
+  text-align: left;
+  width: 100%;
+  transition: background .2s, border-color .2s, transform .15s;
+}
+.btn-home-secondary:hover {
+  background: var(--surface-2);
+  border-color: var(--text-3);
+  transform: translateY(-1px);
+}
+.btn-home-secondary:active { transform: translateY(0); }
+
+.btn-home-icon { font-size: 2rem; flex-shrink: 0; }
+.btn-home-label { font-size: 1rem; font-weight: 700; }
+.btn-home-desc  { font-size: .78rem; color: var(--text-2); margin-top: 2px; }
+
+/* ═══════════════════════════════════════════════
+   ② MULTI LOBBY
+   구조: [방 생성] [코드 입장] [방 목록]
+   순서 고정
+═══════════════════════════════════════════════ */
+#screen-lobby {
+  background: var(--bg-raised);
+}
+
+/* 공통 서브 헤더 */
+.sub-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.btn-back {
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-size: 1rem;
+  transition: border-color .2s, color .2s;
+}
+.btn-back:hover { border-color: var(--text-2); color: var(--text); }
+.sub-header-title {
+  font-family: 'Cinzel', serif;
+  font-size: .95rem;
+  color: var(--gold-lt);
+  letter-spacing: 1px;
+}
+
+.lobby-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 섹션 카드 */
+.lobby-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.lobby-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-dim);
+}
+.lobby-section-title {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-2);
+}
+.lobby-section-body { padding: 14px; }
+
+/* 방 만들기 버튼 */
+.btn-create-room {
+  width: 100%;
+  padding: 13px;
+  background: var(--gold);
+  color: #0a0d12;
+  border-radius: var(--r-sm);
+  font-size: .95rem;
+  font-weight: 700;
+  transition: background .2s, transform .15s;
+}
+.btn-create-room:hover { background: var(--gold-lt); transform: translateY(-1px); }
+.btn-create-room:active { transform: translateY(0); }
+
+/* 코드 입장 */
+.code-join-row {
+  display: flex;
+  gap: 8px;
+}
+.input-code {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  color: var(--gold-lt);
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+  outline: none;
+  transition: border-color .2s;
+}
+.input-code:focus { border-color: var(--gold); }
+.input-code::placeholder { color: var(--text-3); font-size: .85rem; letter-spacing: 1px; }
+.btn-join-code {
+  padding: 11px 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-weight: 700;
+  font-size: .88rem;
+  transition: border-color .2s;
+}
+.btn-join-code:hover { border-color: var(--gold); color: var(--gold-lt); }
+
+/* 방 목록 */
+.room-list { display: flex; flex-direction: column; gap: 0; }
+.room-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border-dim);
+  transition: background .15s;
+}
+.room-item:last-child { border-bottom: none; }
+.room-item:hover { background: var(--surface-2); }
+.room-item-code {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  color: var(--gold-lt);
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+.room-item-meta { font-size: .75rem; color: var(--text-2); margin-top: 2px; }
+.room-item-right { display: flex; align-items: center; gap: 10px; }
+.room-count {
+  font-size: .78rem;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.btn-join-room {
+  padding: 7px 14px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: .82rem;
+  font-weight: 600;
+  transition: border-color .2s;
+}
+.btn-join-room:hover { border-color: var(--gold); color: var(--gold-lt); }
+.room-empty {
+  padding: 20px 14px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: .84rem;
+}
+
+/* ③ WAITING ROOM */
+#screen-waiting { background: var(--bg-raised); }
+
+.waiting-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 방 코드 배너 - 눈에 띄어야 한다 */
+.room-code-banner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.room-code-display {
+  font-family: 'Cinzel', serif;
+  font-size: 1.6rem;
+  color: var(--gold-lt);
+  letter-spacing: 5px;
+  font-weight: 700;
+}
+.room-code-label {
+  font-size: .7rem;
+  color: var(--text-3);
+  margin-top: 3px;
+  letter-spacing: .5px;
+}
+.btn-copy-code {
+  padding: 8px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-size: .8rem;
+  font-weight: 600;
+  transition: all .2s;
+}
+.btn-copy-code:hover { border-color: var(--gold); color: var(--gold-lt); }
+.btn-copy-code.copied { border-color: var(--green); color: var(--green-lt); }
+
+/* 참가자 그리드 */
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.player-slot {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 10px;
+  text-align: center;
+  transition: border-color .2s;
+}
+.player-slot.occupied { border-color: var(--gold-dim); }
+.player-slot.me       { border-color: var(--green); box-shadow: 0 0 0 1px var(--green-dim); }
+.player-slot.host     { border-color: var(--gold); }
+.player-slot.empty    { opacity: .4; border-style: dashed; }
+.player-slot-avatar { font-size: 1.8rem; margin-bottom: 5px; }
+.player-slot-name {
+  font-size: .82rem; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.player-slot-tag {
+  display: inline-block;
+  font-size: .62rem; font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  margin-top: 5px;
+}
+.tag-host { background: var(--gold-dim);  color: var(--gold-lt);  border: 1px solid rgba(200,146,58,.3); }
+.tag-me   { background: var(--green-dim); color: var(--green-lt); border: 1px solid rgba(39,174,96,.3); }
+.tag-empty { color: var(--text-3); font-size: .72rem; }
+
+/* 대기 상태 텍스트 */
+.waiting-status {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 13px 16px;
+  font-size: .85rem;
+  color: var(--text-2);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* 시작 버튼 */
+.btn-start-game {
+  width: 100%;
+  padding: 15px;
+  background: var(--green);
+  border: none;
+  border-radius: var(--r);
+  color: #fff;
+  font-size: .97rem;
+  font-weight: 700;
+  transition: background .2s, transform .15s, opacity .2s;
+}
+.btn-start-game:hover:not(:disabled) { background: var(--green-lt); transform: translateY(-1px); }
+.btn-start-game:active:not(:disabled) { transform: translateY(0); }
+.btn-start-game:disabled { opacity: .35; cursor: not-allowed; }
+.btn-leave-room {
+  width: 100%;
+  padding: 12px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text-2);
+  font-size: .88rem;
+  font-weight: 600;
+  transition: border-color .2s, color .2s;
+}
+.btn-leave-room:hover { border-color: var(--text-3); color: var(--text); }
+
+/* ═══════════════════════════════════════════════
+   ④ GAME SCREEN
+   원칙: 액션이 가장 먼저 보인다
+═══════════════════════════════════════════════ */
+#screen-game {
+  background: var(--bg);
+  padding-bottom: 0; /* action-bar가 fixed라 body 아래 패딩 불필요 */
+}
+
+/* 게임 헤더: 최소화 */
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: sticky; top: 0; z-index: 40;
+}
+.game-header-left { display: flex; align-items: center; gap: 10px; }
+.game-mode-badge {
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.game-mode-badge.solo  { border-color: var(--gold-dim); color: var(--gold); }
+.game-mode-badge.multi { border-color: rgba(52,152,219,.3); color: var(--blue-lt); }
+.game-room-code {
+  font-family: 'Cinzel', serif;
+  font-size: .8rem;
+  color: var(--text-3);
+  letter-spacing: 2px;
+}
+
+/* 우상단: 보조 정보 버튼들 */
+.game-header-right { display: flex; align-items: center; gap: 6px; }
+.btn-aux {
+  height: 32px;
+  padding: 0 11px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-size: .76rem;
+  font-weight: 600;
+  transition: border-color .2s, color .2s;
+}
+.btn-aux:hover { border-color: var(--text-3); color: var(--text); }
+.btn-aux.active { border-color: var(--gold); color: var(--gold-lt); background: var(--gold-dim); }
+
+/* 페이즈 바: 얇고 조용히 */
+.phase-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 16px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border-dim);
+  height: 32px;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.phase-strip::-webkit-scrollbar { display: none; }
+.phase-node {
+  display: flex;
+  align-items: center;
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+  letter-spacing: .3px;
+  transition: color .3s;
+}
+.phase-node.done  { color: var(--text-3); }
+.phase-node.active { color: var(--gold-lt); font-weight: 700; }
+.phase-sep {
+  width: 16px; height: 1px;
+  background: var(--border-dim);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* 타이머 바 */
+.timer-strip { height: 2px; background: var(--bg-raised); flex-shrink: 0; }
+.timer-fill  { height: 100%; background: var(--green); transition: width 1s linear; }
+.timer-fill.warn { background: var(--gold); }
+.timer-fill.danger { background: var(--red); }
+
+/* 현재 액션 배너: 가장 눈에 띄어야 한다 */
+.action-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 16px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-2);
+  text-align: center;
+  flex-shrink: 0;
+  transition: background .25s, color .25s;
+}
+.action-banner.my-turn {
+  background: var(--green-dim);
+  color: var(--green-lt);
+  border-bottom: 1px solid rgba(39,174,96,.2);
+}
+.action-banner.ai-turn {
+  color: var(--text-3);
+}
+.action-banner.needs-next {
+  background: var(--gold-dim);
+  color: var(--gold-lt);
+  border-bottom: 1px solid rgba(200,146,58,.2);
+}
+
+/* 스크롤 가능한 게임 영역 */
+.game-scroll {
+  flex: 1;
+  overflow-y: auto;
+  /* action-bar 높이만큼 패딩 */
+  padding-bottom: 200px;
+}
+.game-scroll::-webkit-scrollbar { display: none; }
+
+/* 상대방 영역 */
+.opponents-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px 6px;
+  flex-wrap: wrap;
+}
+.opponent-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  text-align: center;
+  min-width: 88px;
+  max-width: 130px;
+  position: relative;
+  transition: border-color .25s;
+}
+.opponent-card.is-turn {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold-dim), 0 4px 16px var(--gold-glow);
+}
+.opponent-card.folded { opacity: .3; }
+.opponent-card.allin  { border-color: var(--red-dim); }
+.opp-avatar { font-size: 1.4rem; line-height: 1; }
+.opp-name {
+  font-size: .72rem; font-weight: 700;
+  margin-top: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.opp-chips { font-size: .66rem; color: var(--gold); margin-top: 1px; font-weight: 600; }
+.opp-bet {
+  font-size: .62rem; color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: 5px;
+  padding: 1px 5px;
+  margin-top: 3px;
+  display: inline-block;
+}
+.opp-mini-cards { display: flex; gap: 3px; justify-content: center; margin-top: 6px; }
+.mc {
+  width: 16px; height: 22px; border-radius: 3px;
+  background: linear-gradient(145deg, #1c2a6e, #2a3d96);
+  border: 1px solid rgba(255,255,255,.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .52rem; color: rgba(255,255,255,.35);
+}
+.mc.open {
+  background: #f7f7f7;
+  border-color: #ddd;
+  color: #111;
+  font-size: .6rem;
+  font-weight: 700;
+}
+.mc.open.red { color: #c0392b; }
+.opp-status-tag {
+  position: absolute;
+  bottom: -8px; left: 50%;
+  transform: translateX(-50%);
+  font-size: .58rem; font-weight: 700;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  color: var(--text-2);
+}
+.dealer-btn {
+  position: absolute;
+  top: -7px; right: -7px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #0a0d12;
+  font-size: .55rem;
+  font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--bg);
+}
+
+/* 테이블 (펠트) */
+.table-wrap { padding: 0 12px; }
+.felt-table {
+  background: var(--felt);
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% 20%,
+      rgba(255,255,255,.04) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 50% 60%,
+      rgba(0,0,0,.18) 0%, transparent 80%);
+  border-radius: 80px / 44px;
+  border: 4px solid var(--felt-rim);
+  box-shadow:
+    inset 0 2px 12px rgba(0,0,0,.35),
+    0 6px 24px rgba(0,0,0,.5),
+    0 0 0 5px rgba(0,0,0,.25);
+  padding: 18px 12px 16px;
+  margin: 10px 0;
+}
+
+/* 커뮤니티 카드 */
+.community-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  min-height: 108px;
+}
+
+/* 팟 */
+.pot-display {
+  text-align: center;
+  margin-bottom: 10px;
+}
+.pot-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(200,146,58,.2);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-family: 'Cinzel', serif;
+  font-size: .88rem;
+  color: var(--gold-lt);
+  font-weight: 700;
+}
+
+/* 내 패 배지 */
+.my-hand-badge-row { text-align: center; margin-bottom: 8px; }
+.my-hand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--gold-dim);
+  border: 1px solid rgba(200,146,58,.3);
+  border-radius: 20px;
+  padding: 4px 13px;
+  font-size: .8rem;
+  color: var(--gold-lt);
+  font-weight: 700;
+  transition: all .3s;
+}
+.my-hand-badge.hidden {
+  background: rgba(255,255,255,.03);
+  border-color: transparent;
+  color: rgba(255,255,255,.18);
+}
+
+/* 내 카드 */
+.my-cards-area {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  min-height: 108px;
+}
+
+/* ─── 카드 컴포넌트 ─── */
+.card {
+  width: 76px; height: 108px;
+  border-radius: 9px;
+  perspective: 600px;
+  flex-shrink: 0;
+  animation: card-deal .3s cubic-bezier(.34,1.5,.64,1) both;
+}
+@keyframes card-deal {
+  from { opacity: 0; transform: translateY(-20px) scale(.82); }
+  to   { opacity: 1; transform: none; }
+}
+.card-inner {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d;
+}
+.card.flip-in .card-inner {
+  animation: card-flip .45s cubic-bezier(.23,1,.32,1) forwards;
+}
+@keyframes card-flip {
+  from { transform: rotateY(180deg); }
+  to   { transform: rotateY(0deg); }
+}
+.card-face {
+  position: absolute; inset: 0; border-radius: 9px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* 카드 앞면: 흰 배경, 좌상단+우하단에 숫자+무늬, 가운데 큰 무늬 */
+.card-front {
+  background: #ffffff;
+  border: 1px solid #ccc;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  color: #111;
+  position: relative;
+  padding: 5px 6px;
+}
+.card-front.red { color: #d0021b; }
+
+/* 좌상단: 숫자 + 무늬 세로 배치 */
+.card-tl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  align-self: flex-start;
+}
+.card-tl small { font-size: .85rem; line-height: 1; margin-top: 1px; }
+
+/* 가운데 큰 무늬 */
+.card-mid {
+  font-size: 2.2rem;
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* 우하단: 뒤집힌 숫자 + 무늬 */
+.card-br {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  transform: rotate(180deg);
+  align-self: flex-end;
+}
+.card-br small { font-size: .85rem; line-height: 1; margin-top: 1px; }
+.card-back {
+  background: linear-gradient(145deg, #1a2268, #253494, #1565b8);
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow: var(--shadow-card);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  transform: rotateY(180deg);
+}
+.card.face-down .card-inner  { transform: rotateY(180deg); }
+.card.face-down .card-back   { transform: rotateY(0deg); }
+.card-empty {
+  width: 76px; height: 108px; border-radius: 9px;
+  border: 2px dashed rgba(255,255,255,.1);
+  flex-shrink: 0;
+}
+
+/* ─── 보조 패널 (족보 / 전적) ─── */
+/* 기본 숨김. btn-aux.active 시 슬라이드 다운 */
+.aux-panel {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .35s ease, opacity .25s;
+  opacity: 0;
+}
+.aux-panel.open {
+  max-height: 600px;
+  opacity: 1;
+}
+.aux-panel-inner {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 16px 12px;
+}
+.aux-title {
+  font-family: 'Cinzel', serif;
+  font-size: .82rem;
+  color: var(--gold-lt);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+/* 족보 리스트 */
+.hand-rank-list { list-style: none; }
+.hand-rank-list li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 5px 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-dim);
+  font-size: .8rem;
+}
+.hand-rank-list li:last-child { border-bottom: none; }
+.hrl-rank { color: var(--gold); font-weight: 700; font-size: .72rem; padding-top: 1px; }
+.hrl-name { font-weight: 700; font-size: .82rem; }
+.hrl-desc { color: var(--text-2); font-size: .75rem; grid-column: 2; margin-top: -2px; }
+
+/* 전적 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+@media (max-width: 360px) { .stats-grid { grid-template-columns: repeat(2,1fr); } }
+.stat-box {
+  background: var(--surface-2);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--r-sm);
+  padding: 10px 8px;
+  text-align: center;
+}
+.stat-num {
+  font-family: 'Cinzel', serif;
+  font-size: 1.3rem; font-weight: 700; line-height: 1;
+}
+.stat-lbl { font-size: .65rem; color: var(--text-2); margin-top: 3px; font-weight: 600; }
+.stat-w .stat-num { color: var(--green-lt); }
+.stat-l .stat-num { color: var(--red-lt); }
+.stat-d .stat-num { color: var(--blue-lt); }
+
+.history-list { max-height: 180px; overflow-y: auto; }
+.h-item {
+  display: grid;
+  grid-template-columns: 18px 1fr 52px;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 5px;
+  border-radius: 6px;
+  margin-bottom: 2px;
+  font-size: .77rem;
+}
+.h-item.win  { background: rgba(39,174,96,.07); }
+.h-item.lose { background: rgba(192,57,43,.07); }
+.h-item.draw { background: rgba(41,128,185,.07); }
+.h-chip { text-align: right; font-weight: 700; }
+.h-item.win  .h-chip { color: var(--green-lt); }
+.h-item.lose .h-chip { color: var(--red-lt); }
+.h-sub {
+  color: var(--text-2); font-size: .7rem;
+  grid-column: 2 / -1;
+  margin-top: -2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ─── ACTION BAR (fixed bottom) ─── */
+.action-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-up);
+  padding: 12px 14px 14px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* 베팅 컨트롤 (슬라이더 + 프리셋) */
+.bet-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bet-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bet-label  { font-size: .72rem; color: var(--text-2); font-weight: 600; white-space: nowrap; }
+.bet-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  cursor: pointer;
+  outline: none;
+}
+.bet-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+.bet-amount {
+  font-family: 'Cinzel', serif;
+  font-size: .9rem;
+  color: var(--gold-lt);
+  font-weight: 700;
+  min-width: 52px;
+  text-align: right;
+}
+.bet-presets {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+.bet-presets::-webkit-scrollbar { display: none; }
+.btn-preset {
+  flex-shrink: 0;
+  padding: 5px 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-size: .74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  min-height: 32px;
+  transition: border-color .15s, color .15s;
+}
+.btn-preset:hover { border-color: var(--gold); color: var(--gold-lt); }
+
+/* 메인 액션 버튼들 */
+.action-btns { display: flex; gap: 7px; }
+.btn-action {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: .82rem;
+  border-radius: var(--r-sm);
+  padding: 12px 6px;
+  transition: transform .15s, box-shadow .15s, opacity .15s;
+  min-height: 48px;
+  white-space: nowrap;
+}
+.btn-action:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(0,0,0,.3); }
+.btn-action:active:not(:disabled) { transform: translateY(0); }
+.btn-action:disabled { opacity: .28; cursor: not-allowed; transform: none; }
+
+/* 버튼 위계 */
+/* PRIMARY: 가장 눈에 띄는 행동 (게임 시작, 다음 단계) */
+.btn-action.primary {
+  background: var(--gold);
+  color: #0a0d12;
+  flex: 3;
+  font-size: .9rem;
+}
+.btn-action.primary:hover:not(:disabled) { background: var(--gold-lt); }
+
+/* CONSTRUCTIVE: 콜, 체크 */
+.btn-action.constructive {
+  background: var(--green-dim);
+  color: var(--green-lt);
+  border: 1px solid rgba(39,174,96,.3);
+  flex: 2;
+}
+.btn-action.constructive:hover:not(:disabled) { background: rgba(39,174,96,.25); }
+
+/* NEUTRAL: 레이즈 */
+.btn-action.neutral {
+  background: var(--gold-dim);
+  color: var(--gold-lt);
+  border: 1px solid rgba(200,146,58,.3);
+  flex: 2;
+}
+
+/* DANGER: 폴드 */
+.btn-action.danger {
+  background: var(--red-dim);
+  color: var(--red-lt);
+  border: 1px solid rgba(192,57,43,.3);
+  flex: 1;
+}
+
+/* ALLIN: 올인 */
+.btn-action.allin {
+  background: var(--red);
+  color: #fff;
+  flex: 2;
+  font-size: .78rem;
+}
+
+/* 상태 메시지 (내 차례 아닐 때) */
+.action-status {
+  text-align: center;
+  color: var(--text-2);
+  font-size: .83rem;
+  padding: 12px 0 4px;
+  width: 100%;
+}
+
+/* ─── 결과 모달 ─── */
+.result-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.82);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.result-overlay.show { display: flex; }
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 28px 24px;
+  text-align: center;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 40px 80px rgba(0,0,0,.7);
+  animation: result-pop .4s cubic-bezier(.34,1.5,.64,1);
+}
+@keyframes result-pop {
+  from { transform: scale(.55) translateY(30px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.result-card.win  { border-color: var(--gold); }
+.result-card.lose { border-color: var(--red-lt); }
+.result-card.draw { border-color: var(--blue-lt); }
+.result-emoji { font-size: 3.2rem; margin-bottom: 10px; display: block; }
+.result-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.75rem; font-weight: 900;
+  margin-bottom: 8px;
+}
+.result-card.win  .result-title { color: var(--gold-lt); }
+.result-card.lose .result-title { color: var(--red-lt); }
+.result-card.draw .result-title { color: var(--blue-lt); }
+.result-rows {
+  display: flex; flex-direction: column; gap: 6px;
+  margin: 12px 0; text-align: left;
+}
+.result-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  font-size: .83rem;
+}
+.result-row-name { font-weight: 700; }
+.result-row-hand { color: var(--text-2); font-size: .76rem; }
+.result-row-win  { color: var(--green-lt); font-weight: 700; }
+.result-chip {
+  font-family: 'Cinzel', serif;
+  font-size: 1.4rem; font-weight: 700;
+  margin: 8px 0;
+}
+.result-card.win  .result-chip { color: var(--gold-lt); }
+.result-card.lose .result-chip { color: var(--red-lt); }
+.btn-next-round {
+  width: 100%;
+  padding: 13px;
+  background: var(--gold);
+  color: #0a0d12;
+  border-radius: var(--r);
+  font-size: .95rem;
+  font-weight: 700;
+  margin-top: 14px;
+  transition: background .2s;
+}
+.btn-next-round:hover { background: var(--gold-lt); }
+
+/* confetti */
+.confetti-piece {
+  position: fixed; top: -12px;
+  pointer-events: none; z-index: 600;
+  animation: conf-fall linear forwards;
+}
+@keyframes conf-fall {
+  0%   { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+/* ─── 반응형 ─── */
+@media (max-width: 380px) {
+  .card { width: 52px; height: 78px; }
+  .card-empty { width: 52px; height: 78px; }
+  .card-mid { font-size: 1.15rem; }
+  .btn-action { font-size: .75rem; padding: 11px 4px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════
+  ① HOME SCREEN
+  원칙: 버튼 2개만
+══════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-home">
+  <div class="home-inner">
+    <h1 class="home-logo">Hold'em Club</h1>
+    <p class="home-logo-sub">Texas Hold'em</p>
+
+    <div class="home-actions">
+      <button class="btn-home-primary" id="btn-solo">
+        <span class="btn-home-icon">🤖</span>
+        <div>
+          <div class="btn-home-label">솔로 플레이</div>
+          <div class="btn-home-desc">AI 딜러와 1:1 · 즉시 시작</div>
+        </div>
+      </button>
+
+      <button class="btn-home-secondary" id="btn-multi">
+        <span class="btn-home-icon">🏟️</span>
+        <div>
+          <div class="btn-home-label">멀티플레이</div>
+          <div class="btn-home-desc">친구들과 함께 · 최대 5명</div>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  ② MULTI LOBBY
+  순서: [방 생성] [코드 입장] [방 목록]
+══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-lobby">
+  <div class="sub-header">
+    <button class="btn-back" id="lobby-back">←</button>
+    <span class="sub-header-title">멀티플레이 로비</span>
+  </div>
+
+  <div class="lobby-body">
+
+    <!-- 1. 방 만들기 -->
+    <div class="lobby-section">
+      <div class="lobby-section-header">
+        <span class="lobby-section-title">새 방 만들기</span>
+      </div>
+      <div class="lobby-section-body">
+        <button class="btn-create-room" id="btn-create-room">
+          🎴 방 만들기
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. 코드로 입장 -->
+    <div class="lobby-section">
+      <div class="lobby-section-header">
+        <span class="lobby-section-title">코드로 입장</span>
+      </div>
+      <div class="lobby-section-body">
+        <div class="code-join-row">
+          <input class="input-code" id="input-room-code"
+            placeholder="XXXX" maxlength="4">
+          <button class="btn-join-code" id="btn-join-code">입장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 열린 방 목록 -->
+    <div class="lobby-section">
+      <div class="lobby-section-header">
+        <span class="lobby-section-title">열린 방</span>
+        <button class="btn-aux" id="btn-refresh-rooms">↻ 새로고침</button>
+      </div>
+      <div id="room-list-area">
+        <div class="room-empty">불러오는 중...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  ③ WAITING ROOM
+  흐름: 방코드 → 참가자 → 시작
+══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-waiting">
+  <div class="sub-header">
+    <button class="btn-back" id="waiting-back">←</button>
+    <span class="sub-header-title">대기실</span>
+  </div>
+
+  <div class="waiting-body">
+
+    <!-- 방 코드 배너 -->
+    <div class="room-code-banner">
+      <div>
+        <div class="room-code-display" id="waiting-room-code">XXXX</div>
+        <div class="room-code-label">방 코드 — 친구에게 공유하세요</div>
+      </div>
+      <button class="btn-copy-code" id="btn-copy-code">📋 복사</button>
+    </div>
+
+    <!-- 참가자 -->
+    <div class="lobby-section">
+      <div class="lobby-section-header">
+        <span class="lobby-section-title">참가자</span>
+        <span id="waiting-player-count" style="font-size:.78rem;color:var(--text-2)">0 / 5</span>
+      </div>
+      <div class="lobby-section-body" style="padding:10px">
+        <div class="players-grid" id="players-grid"></div>
+      </div>
+    </div>
+
+    <!-- 상태 / 시작 -->
+    <div class="waiting-status" id="waiting-status">
+      친구를 기다리는 중...
+    </div>
+    <button class="btn-start-game" id="btn-start-game" disabled>
+      🎴 게임 시작
+    </button>
+    <button class="btn-leave-room" id="btn-leave-room">
+      방 나가기
+    </button>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  ④ GAME SCREEN
+══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-game">
+
+  <!-- 게임 헤더 -->
+  <div class="game-header">
+    <div class="game-header-left">
+      <button class="btn-back" id="game-back">←</button>
+      <span class="game-mode-badge solo" id="game-mode-badge">솔로</span>
+      <span class="game-room-code" id="game-room-code" style="display:none"></span>
+    </div>
+    <div class="game-header-right">
+      <!-- 칩/팟은 헤더가 아닌 테이블 위에 표시 -->
+      <button class="btn-aux" id="btn-guide-toggle">📖 족보</button>
+      <button class="btn-aux" id="btn-stats-toggle">📊 전적</button>
+    </div>
+  </div>
+
+  <!-- 보조 패널: 족보 (기본 숨김) -->
+  <div class="aux-panel" id="panel-guide">
+    <div class="aux-panel-inner">
+      <div class="aux-title">족보 순위 (강한 순서)</div>
+      <ul class="hand-rank-list">
+        <li><span class="hrl-rank">1위</span><span class="hrl-name">👑 로열 플러시</span><span class="hrl-desc">같은 무늬 A K Q J 10</span></li>
+        <li><span class="hrl-rank">2위</span><span class="hrl-name">✨ 스트레이트 플러시</span><span class="hrl-desc">같은 무늬 연속 5장</span></li>
+        <li><span class="hrl-rank">3위</span><span class="hrl-name">🎯 포카드</span><span class="hrl-desc">같은 숫자 4장</span></li>
+        <li><span class="hrl-rank">4위</span><span class="hrl-name">🏠 풀하우스</span><span class="hrl-desc">트리플 + 페어</span></li>
+        <li><span class="hrl-rank">5위</span><span class="hrl-name">🌊 플러시</span><span class="hrl-desc">같은 무늬 5장</span></li>
+        <li><span class="hrl-rank">6위</span><span class="hrl-name">➡️ 스트레이트</span><span class="hrl-desc">연속 숫자 5장</span></li>
+        <li><span class="hrl-rank">7위</span><span class="hrl-name">🔺 트리플</span><span class="hrl-desc">같은 숫자 3장</span></li>
+        <li><span class="hrl-rank">8위</span><span class="hrl-name">👥 투페어</span><span class="hrl-desc">페어 2쌍</span></li>
+        <li><span class="hrl-rank">9위</span><span class="hrl-name">👤 원페어</span><span class="hrl-desc">같은 숫자 2장</span></li>
+        <li><span class="hrl-rank">10위</span><span class="hrl-name">🃏 하이카드</span><span class="hrl-desc">아무 조합 없음</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 보조 패널: 전적 (기본 숨김) -->
+  <div class="aux-panel" id="panel-stats">
+    <div class="aux-panel-inner">
+      <div class="aux-title">게임 전적</div>
+      <div class="stats-grid">
+        <div class="stat-box stat-w"><div class="stat-num" id="stat-w">0</div><div class="stat-lbl">🏆 승리</div></div>
+        <div class="stat-box stat-l"><div class="stat-num" id="stat-l">0</div><div class="stat-lbl">💧 패배</div></div>
+        <div class="stat-box stat-d"><div class="stat-num" id="stat-d">0</div><div class="stat-lbl">🤝 무승부</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-p" style="font-size:1.1rem">+0</div><div class="stat-lbl">🪙 수익</div></div>
+      </div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- 페이즈 바 -->
+  <div class="phase-strip" id="phase-strip"></div>
+
+  <!-- 타이머 바 -->
+  <div class="timer-strip">
+    <div class="timer-fill" id="timer-fill" style="width:100%"></div>
+  </div>
+
+  <!-- 액션 배너: 지금 뭘 해야 하는지 -->
+  <div class="action-banner" id="action-banner"></div>
+
+  <!-- 스크롤 게임 영역 -->
+  <div class="game-scroll">
+
+    <!-- 상대방 -->
+    <div class="opponents-row" id="opponents-row"></div>
+
+    <!-- 테이블 -->
+    <div class="table-wrap">
+      <div class="felt-table">
+
+        <!-- 커뮤니티 카드 -->
+        <div class="community-area" id="community-cards"></div>
+
+        <!-- 팟 + 라운드 -->
+        <div class="pot-display">
+          <div class="pot-pill">
+            🪙&nbsp;<span id="pot-display">0</span>
+            <span style="color:var(--text-3);font-size:.7rem;margin-left:4px" id="round-display"></span>
+          </div>
+        </div>
+
+        <!-- 내 패 배지 -->
+        <div class="my-hand-badge-row">
+          <div class="my-hand-badge hidden" id="hand-badge">?</div>
+        </div>
+
+        <!-- 내 카드 -->
+        <div class="my-cards-area" id="my-cards"></div>
+
+      </div>
+    </div>
+
+    <!-- 내 칩 (테이블 아래) -->
+    <div style="text-align:center;padding:6px 0 4px;font-size:.78rem;color:var(--text-2)">
+      내 칩 <span style="font-family:'Cinzel',serif;color:var(--gold-lt);font-weight:700" id="chip-display">5,000</span>
+    </div>
+
+  </div><!-- /.game-scroll -->
+
+  <!-- 액션 바: fixed bottom -->
+  <div class="action-bar" id="action-bar">
+    <!-- bet-controls 와 action-btns 는 JS가 동적으로 채운다 -->
+    <div class="bet-controls" id="bet-controls" style="display:none">
+      <div class="bet-slider-row">
+        <span class="bet-label">베팅</span>
+        <input type="range" class="bet-slider" id="bet-slider"
+          min="50" max="5000" value="100" step="10">
+        <span class="bet-amount" id="bet-amount">100</span>
+      </div>
+      <div class="bet-presets">
+        <button class="btn-preset" data-mul=".25">1/4 팟</button>
+        <button class="btn-preset" data-mul=".5">하프</button>
+        <button class="btn-preset" data-mul=".75">3/4 팟</button>
+        <button class="btn-preset" data-mul="1">팟</button>
+        <button class="btn-preset" data-allin="1">올인↑</button>
+      </div>
+    </div>
+    <div class="action-btns" id="action-btns"></div>
+  </div>
+
+  <!-- 결과 모달 -->
+  <div class="result-overlay" id="result-overlay">
+    <div class="result-card" id="result-card">
+      <span class="result-emoji" id="result-emoji">🎉</span>
+      <div class="result-title" id="result-title">승리!</div>
+      <div class="result-rows" id="result-rows"></div>
+      <div class="result-chip" id="result-chip"></div>
+      <button class="btn-next-round" id="btn-next-round">다음 라운드 →</button>
+    </div>
+  </div>
+
+</div><!-- /#screen-game -->
+
+<!-- ══════════════════════════════════════════════════
+  SCRIPT
+  JS 로직: 기존 코드 100% 보존
+  변경: ID/클래스명 매핑 + 멀티 WS 추가
+══════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ═══════════════════════════════════
+   WebSocket 서버 주소
+   배포 시 아래 주소로 교체:
+   wss://holdem-server.onrender.com
+═══════════════════════════════════ */
+const WS_URL = 'wss://holdem-server.onrender.com';
+
+/* ═══════════════════════════════════
+   상수
+═══════════════════════════════════ */
+const RANKS    = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const SUITS    = ['♠','♥','♦','♣'];
+const RV       = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
+const RED      = new Set(['♥','♦']);
+const HD       = [
+  {p:0,n:'하이카드',e:'🃏'},{p:1,n:'원페어',e:'👤'},{p:2,n:'투페어',e:'👥'},
+  {p:3,n:'트리플',e:'🔺'},{p:4,n:'스트레이트',e:'➡️'},{p:5,n:'플러시',e:'🌊'},
+  {p:6,n:'풀하우스',e:'🏠'},{p:7,n:'포카드',e:'🎯'},
+  {p:8,n:'스트레이트 플러시',e:'✨'},{p:9,n:'로열 플러시',e:'👑'},
+];
+const PH_IDS = ['idle','preflop','flop','turn','river','showdown'];
+const PH_KO  = ['시작','프리플랍','플랍','턴','리버','쇼다운'];
+const START  = 5000, SB = 25, BB = 50, TSEC = 30;
+const AVATARS = ['🎩','🦊','🐺','🦁','🐯','🐸','🦅','🐲','🦈','🐻'];
+
+/* ═══════════════════════════════════
+   게임 상태
+═══════════════════════════════════ */
+const G = {
+  // 공통
+  name: '',
+  mode: 'solo', // 'solo' | 'multi'
+
+  // 솔로
+  phase: 'idle',
+  deck: [], comm: [],
+  myHand: [], aiHand: [],
+  pot: 0, myChips: START,
+  myBet: 0, aiBet: 0,
+  currentBet: 0,
+  myFold: false, aiFold: false,
+  myAllIn: false, aiAllIn: false,
+  myTurn: false,
+  aiThinking: false,
+  bettingDone: false,
+  round: 0,
+  timerID: null, timerSec: TSEC,
+
+  // 멀티
+  ws: null,
+  playerId: null,
+  roomId: null,
+  isHost: false,
+  multiState: null,
+
+  // 통계 (공유)
+  stats: JSON.parse(localStorage.getItem('hc_s') ||
+    '{"w":0,"l":0,"d":0,"profit":0,"hist":[]}'),
+};
+
+/* ═══════════════════════════════════
+   유틸
+═══════════════════════════════════ */
+const $ = id => document.getElementById(id);
+
+let _toastTimer = null;
+function toast(msg, type = '') {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen')
+    .forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+/* ═══════════════════════════════════
+   덱 / 카드
+═══════════════════════════════════ */
+function makeDeck() {
+  const d = [];
+  for (const s of SUITS)
+    for (const r of RANKS)
+      d.push({ rank: r, suit: s, val: RV[r] });
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+function draw() { return G.deck.pop(); }
+
+/* ═══════════════════════════════════
+   족보 판정 (원본 보존)
+═══════════════════════════════════ */
+function evalHand(cards) {
+  if (!cards || cards.length < 2) return { ...HD[0], tieBreak: [] };
+  if (cards.length < 5) return qeval(cards);
+  let best = null;
+  for (const c of combos5(cards)) {
+    const r = eval5(c);
+    if (!best || cmpH(r, best) > 0) best = r;
+  }
+  return best;
+}
+function cmpH(a, b) {
+  if (!a) return -1; if (!b) return 1;
+  if (a.p !== b.p) return a.p - b.p;
+  for (let i = 0; i < Math.max(a.tieBreak.length, b.tieBreak.length); i++) {
+    const d = (a.tieBreak[i] || 0) - (b.tieBreak[i] || 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+function eval5(cards) {
+  const s  = [...cards].sort((a, b) => b.val - a.val);
+  const v  = s.map(c => c.val), su = s.map(c => c.suit);
+  const f  = {}; for (const x of v) f[x] = (f[x] || 0) + 1;
+  const cnt = Object.values(f).sort((a, b) => b - a);
+  const fl  = su.every(x => x === su[0]);
+  const sh  = strH(v), st = sh > 0;
+  const mk  = (i, tb) => ({ ...HD[i], tieBreak: tb });
+  if (fl && st && sh === 14) return mk(9, [14]);
+  if (fl && st)               return mk(8, [sh]);
+  if (cnt[0] === 4) { const q = _tc(f,4), k = _tc(f,1); return mk(7,[q,k]); }
+  if (cnt[0] === 3 && cnt[1] === 2) return mk(6, [_tc(f,3), _tc(f,2)]);
+  if (fl) return mk(5, v);
+  if (st) return mk(4, [sh]);
+  if (cnt[0] === 3) { const t = _tc(f,3); return mk(3,[t,...v.filter(x=>x!==t)]); }
+  if (cnt[0] === 2 && cnt[1] === 2) {
+    const ps = Object.keys(f).filter(k => f[k]===2).map(Number).sort((a,b)=>b-a);
+    return mk(2, [...ps, v.find(x => f[x]===1) || 0]);
+  }
+  if (cnt[0] === 2) { const p = _tc(f,2); return mk(1,[p,...v.filter(x=>x!==p)]); }
+  return mk(0, v);
+}
+function _tc(f, c) {
+  return Math.max(...Object.keys(f).filter(k => f[k] === c).map(Number));
+}
+function strH(v) {
+  const u = [...new Set(v)].sort((a,b) => b-a);
+  for (let i = 0; i <= u.length - 5; i++)
+    if (u[i]-u[i+4]===4 && new Set(u.slice(i,i+5)).size===5) return u[i];
+  if ([14,5,4,3,2].every(x => v.includes(x))) return 5;
+  return 0;
+}
+function combos5(arr) {
+  const res = [];
+  function c(buf, k, st) {
+    if (k === 0) { res.push([...buf]); return; }
+    for (let i = st; i <= arr.length - k; i++) {
+      buf.push(arr[i]); c(buf, k-1, i+1); buf.pop();
+    }
+  }
+  c([], 5, 0); return res;
+}
+function qeval(cards) {
+  const v = cards.map(c => c.val).sort((a,b) => b-a), f = {};
+  for (const x of v) f[x] = (f[x]||0)+1;
+  const cnt = Object.values(f).sort((a,b) => b-a);
+  if (cnt[0] === 3) return { ...HD[3], tieBreak: v };
+  if (cnt[0] === 2 && cnt[1] === 2) return { ...HD[2], tieBreak: v };
+  if (cnt[0] === 2) return { ...HD[1], tieBreak: v };
+  return { ...HD[0], tieBreak: v };
+}
+
+/* ═══════════════════════════════════
+   솔로 게임 흐름 (원본 보존)
+═══════════════════════════════════ */
+function startRound() {
+  if (G.myChips < BB) {
+    G.myChips = START;
+    toast(`파산! ${START.toLocaleString()}칩으로 충전 🪙`, 'warn');
+  }
+  G.round++;
+  G.deck = makeDeck();
+  G.comm = [];
+  G.pot = 0; G.myBet = 0; G.aiBet = 0; G.currentBet = BB;
+  G.myFold = false; G.aiFold = false;
+  G.myAllIn = false; G.aiAllIn = false;
+  G.myTurn = false; G.aiThinking = false;
+  G.bettingDone = false;
+  G.phase = 'preflop';
+  G.myHand = [draw(), draw()];
+  G.aiHand = [draw(), draw()];
+  if (G.round % 2 === 1) {
+    _blind('my', SB); _blind('ai', BB);
+  } else {
+    _blind('ai', SB); _blind('my', BB);
+  }
+  render();
+  _playerTurn();
+}
+
+function _blind(who, amt) {
+  const pay = Math.min(amt, who === 'my' ? G.myChips : 9999);
+  if (who === 'my') { G.myChips -= pay; G.myBet += pay; if (G.myChips===0) G.myAllIn=true; }
+  else              { G.aiBet += pay; }
+  G.pot += pay;
+}
+
+function _playerTurn() {
+  G.myTurn = true; G.aiThinking = false; G.bettingDone = false;
+  render(); startTimer();
+}
+
+function _aiTurn() {
+  G.myTurn = false; G.aiThinking = true; G.bettingDone = false;
+  render(); stopTimer();
+  const delay = 700 + Math.random() * 900;
+  setTimeout(() => {
+    if (G.phase === 'showdown' || G.phase === 'idle') return;
+    const r    = evalHand([...G.aiHand, ...G.comm]);
+    const pw   = r.p;
+    const diff = Math.max(0, G.currentBet - G.aiBet);
+
+    // ★ 버그 수정: 플레이어가 이미 올인 상태이면 AI는 콜/폴드만 가능
+    // 레이즈 후 _playerTurn()을 호출하면 플레이어가 아무것도 못 해서 게임이 멈춤
+    if (G.myAllIn) {
+      // 플레이어 올인 상황: AI는 콜하거나 폴드만
+      if (diff > 0 && Math.random() < 0.25) {
+        // 25% 확률로 폴드
+        G.aiFold = true; G.myChips += G.pot;
+        toast('AI가 폴드했어요! 🏳️', 'ok');
+        G.aiThinking = false; G.phase = 'showdown'; render();
+        setTimeout(() => showResult('win','🏆','AI 폴드!',
+          '딜러가 포기했어요.', G.pot,
+          [{nm:'나',hd:'-',w:true},{nm:'AI',hd:'폴드',w:false}]), 400);
+        saveStat('win', G.pot, '딜러 폴드', '폴드', '-', '-');
+        return;
+      }
+      // 콜
+      if (diff > 0) { G.aiBet += diff; G.pot += diff; toast('AI가 콜했어요 📞'); }
+      else toast('AI가 체크했어요 ✋');
+      G.aiThinking = false; _roundBettingDone();
+      return;
+    }
+
+    if (pw >= 5) {
+      const extra = Math.min(Math.floor(G.pot * .6) + 50, 300);
+      const pay   = diff + extra;
+      G.aiBet += pay; G.pot += pay; G.currentBet = G.aiBet;
+      toast(`AI가 ${pay}칩 레이즈했어요 📈`, 'warn');
+      G.aiThinking = false; _playerTurn();
+    } else if (pw >= 3) {
+      if (diff > 0) { G.aiBet += diff; G.pot += diff; toast('AI가 콜했어요 📞'); }
+      else toast('AI가 체크했어요 ✋');
+      G.aiThinking = false; _roundBettingDone();
+    } else {
+      if (diff > 0 && Math.random() < .35) {
+        G.aiFold = true; G.myChips += G.pot;
+        toast('AI가 폴드했어요! 🏳️', 'ok');
+        G.aiThinking = false; G.phase = 'showdown'; render();
+        setTimeout(() => showResult('win','🏆','AI 폴드!',
+          '딜러가 포기했어요.',G.pot,
+          [{nm:'나',hd:'-',w:true},{nm:'AI',hd:'폴드',w:false}]), 400);
+        saveStat('win', G.pot, '딜러 폴드', '폴드', '-', '-');
+        return;
+      }
+      if (diff > 0) { G.aiBet += diff; G.pot += diff; toast('AI가 콜했어요 📞'); }
+      else toast('AI가 체크했어요 ✋');
+      G.aiThinking = false; _roundBettingDone();
+    }
+  }, delay);
+}
+
+function _roundBettingDone() {
+  G.bettingDone = true; G.myTurn = true;
+  stopTimer();
+
+  // ★ 올인 상태이면 남은 커뮤니티 카드를 한 번에 다 공개하고 바로 쇼다운
+  // actNext()를 반복 호출하면 _playerTurn() 루프가 생겨 리버에서 멈추는 버그가 있었음
+  if (G.myAllIn) {
+    while (G.comm.length < 5) {
+      G.comm.push(draw());
+    }
+    G.bettingDone = false;
+    render();
+    setTimeout(() => { doShowdown(); }, 1200);
+    return;
+  }
+
+  render();
+  const NEXT = { preflop:'플랍', flop:'턴', turn:'리버', river:'쇼다운' };
+  const bn = $('action-banner');
+  bn.textContent = `✅ 베팅 완료 — "${NEXT[G.phase]}" 버튼을 눌러 계속`;
+  bn.className = 'action-banner needs-next';
+}
+
+function actFold() {
+  if (!_canAct()) return;
+  stopTimer(); G.myFold = true;
+  const loss = -G.myBet; G.phase = 'showdown'; render();
+  setTimeout(() => showResult('lose','🏳️','폴드',
+    '베팅한 칩을 잃었어요.', loss,
+    [{nm:'나',hd:'폴드',w:false},{nm:'AI',hd:'-',w:true}]), 300);
+  saveStat('lose', loss, '폴드', '-', '-', '-');
+}
+function actCheck() {
+  if (!_canAct()) return;
+  if (G.currentBet - G.myBet > 0) { toast('콜이 필요해요!', 'err'); return; }
+  stopTimer(); G.myTurn = false; render();
+  setTimeout(_aiTurn, 300);
+}
+function actCall() {
+  if (!_canAct()) return;
+  const diff = Math.max(0, G.currentBet - G.myBet);
+  if (diff <= 0) { actCheck(); return; }
+  const pay = Math.min(diff, G.myChips);
+  G.myChips -= pay; G.myBet += pay; G.pot += pay;
+  if (G.myChips === 0) G.myAllIn = true;
+  stopTimer(); G.myTurn = false; render();
+  setTimeout(_aiTurn, 300);
+}
+function actRaise(amount) {
+  if (!_canAct()) return;
+  const diff  = Math.max(0, G.currentBet - G.myBet);
+  const extra = Math.max(BB, amount);
+  const pay   = Math.min(diff + extra, G.myChips);
+  if (pay <= 0) { toast('베팅할 칩이 없어요.', 'err'); return; }
+  G.myChips -= pay; G.myBet += pay; G.pot += pay;
+  G.currentBet = G.myBet;
+  if (G.myChips === 0) G.myAllIn = true;
+  stopTimer(); G.myTurn = false; render();
+  setTimeout(_aiTurn, 300);
+}
+function actAllIn() {
+  if (!_canAct()) return;
+  if (G.myChips <= 0) { toast('칩이 없어요.', 'err'); return; }
+  const pay = G.myChips;
+  G.myChips = 0; G.myBet += pay; G.pot += pay;
+  if (G.myBet > G.currentBet) G.currentBet = G.myBet;
+  G.myAllIn = true;
+  stopTimer(); G.myTurn = false; render();
+  setTimeout(_aiTurn, 300);
+}
+function actNext() {
+  if (!G.bettingDone) { toast('베팅을 먼저 완료해야 해요.', 'warn'); return; }
+  G.bettingDone = false;
+  G.myBet = 0; G.aiBet = 0; G.currentBet = 0;
+  switch (G.phase) {
+    case 'preflop': G.comm = [draw(),draw(),draw()]; G.phase = 'flop'; break;
+    case 'flop':    G.comm.push(draw());              G.phase = 'turn'; break;
+    case 'turn':    G.comm.push(draw());              G.phase = 'river'; break;
+    case 'river':   doShowdown(); return;
+  }
+  render();
+  // ★ 핵심 수정: 올인 상태이면 _playerTurn() 호출 금지
+  // (올인이면 베팅 불가 → 멈춤 발생). 대신 자동으로 다음 스트리트 연속 진행
+  if (G.myAllIn) {
+    G.bettingDone = true;
+    G.myTurn = true;
+    setTimeout(() => actNext(), 900);
+    return;
+  }
+  _playerTurn();
+}
+function doShowdown() {
+  G.phase = 'showdown'; render();
+  const myR = evalHand([...G.myHand, ...G.comm]);
+  const aiR = evalHand([...G.aiHand, ...G.comm]);
+  const cmp = cmpH(myR, aiR);
+  let result, em, title, chipChange;
+  if (cmp > 0)      { chipChange = G.pot;              G.myChips += G.pot; result='win'; em='🎉'; title='승리!'; }
+  else if (cmp < 0) { chipChange = -G.pot;                                 result='lose';em='😢'; title='패배...'; }
+  else              { const h = Math.floor(G.pot/2);   G.myChips += h;     chipChange=h; result='draw';em='🤝'; title='무승부!'; }
+  const sub  = `내 패: ${myR.e} ${myR.n}  |  AI: ${aiR.e} ${aiR.n}`;
+  const rows = [
+    { nm:'나',      hd:`${myR.e} ${myR.n}`, w: cmp >= 0 },
+    { nm:'딜러 AI', hd:`${aiR.e} ${aiR.n}`, w: cmp <= 0 },
+  ];
+  setTimeout(() => showResult(result, em, title, sub, chipChange, rows), 700);
+  saveStat(result, chipChange,
+    `${myR.e} ${myR.n}`, `${aiR.e} ${aiR.n}`,
+    G.myHand.map(c => c.rank+c.suit).join(' '),
+    G.aiHand.map(c => c.rank+c.suit).join(' '));
+}
+function _canAct() {
+  return G.myTurn && !G.myFold && !G.myAllIn
+      && G.phase !== 'idle' && G.phase !== 'showdown'
+      && !G.aiThinking && !G.bettingDone;
+}
+
+/* ═══════════════════════════════════
+   타이머 (원본 보존)
+═══════════════════════════════════ */
+function startTimer(sec = TSEC) {
+  stopTimer(); G.timerSec = sec;
+  const f = $('timer-fill');
+  f.style.transition = 'none'; f.style.width = '100%'; f.className = 'timer-fill';
+  G.timerID = setInterval(() => {
+    G.timerSec--;
+    const p = Math.max(0, (G.timerSec / sec) * 100);
+    f.style.transition = 'width 1s linear';
+    f.style.width = p + '%';
+    f.className = `timer-fill ${p < 30 ? 'danger' : p < 60 ? 'warn' : ''}`;
+    if (G.timerSec <= 0) {
+      stopTimer();
+      if (G.currentBet <= G.myBet) actCheck(); else actFold();
+    }
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(G.timerID); G.timerID = null;
+  const f = $('timer-fill');
+  f.style.width = '100%'; f.className = 'timer-fill';
+}
+
+/* ═══════════════════════════════════
+   렌더링
+═══════════════════════════════════ */
+function render() {
+  if (G.mode !== 'solo') return;
+
+  // 헤더 수치
+  $('pot-display').textContent  = G.pot.toLocaleString();
+  $('chip-display').textContent = G.myChips.toLocaleString();
+  $('round-display').textContent = G.round > 0 ? `R${G.round}` : '';
+
+  // 페이즈 바
+  const pi = PH_IDS.indexOf(G.phase);
+  $('phase-strip').innerHTML = PH_IDS.map((p, i) => {
+    const cls = i < pi ? 'done' : i === pi ? 'active' : '';
+    const sep = i < PH_IDS.length - 1 ? '<div class="phase-sep"></div>' : '';
+    return `<div class="phase-node ${cls}">${PH_KO[i]}</div>${sep}`;
+  }).join('');
+
+  // 액션 배너
+  const bn = $('action-banner');
+  if (!G.bettingDone) {
+    if (G.phase === 'idle' || G.phase === 'showdown') {
+      bn.textContent = ''; bn.className = 'action-banner';
+    } else if (G.myTurn && !G.myFold && !G.myAllIn) {
+      bn.textContent = '⚡ 내 차례입니다'; bn.className = 'action-banner my-turn';
+    } else if (G.aiThinking) {
+      bn.textContent = 'AI 생각 중...'; bn.className = 'action-banner ai-turn';
+    } else {
+      bn.textContent = ''; bn.className = 'action-banner';
+    }
+  }
+
+  // AI 좌석
+  const aiShow = G.phase === 'showdown' && !G.aiFold;
+  $('opponents-row').innerHTML = `
+    <div class="opponent-card ${G.aiThinking && !G.bettingDone ? 'is-turn' : ''} ${G.aiFold ? 'folded' : ''}">
+      <div class="opp-avatar">🤖</div>
+      <div class="opp-name">딜러 AI</div>
+      <div class="opp-chips">칩 ∞</div>
+      ${G.aiBet > 0 ? `<div class="opp-bet">베팅 ${G.aiBet}</div>` : ''}
+      <div class="opp-mini-cards">
+        ${G.aiHand.map(c => {
+          if (aiShow) {
+            const r = RED.has(c.suit);
+            return `<div class="mc open ${r?'red':''}">${c.rank}</div>`;
+          }
+          return `<div class="mc">?</div>`;
+        }).join('')}
+      </div>
+      ${G.aiFold ? `<div class="opp-status-tag">FOLD</div>` : ''}
+    </div>`;
+
+  // 커뮤니티 카드
+  let ch = G.comm.map((c, i) => cardHTML(c, false, i * 100)).join('');
+  for (let i = G.comm.length; i < 5; i++) ch += `<div class="card-empty"></div>`;
+  $('community-cards').innerHTML = ch;
+
+  // 내 카드
+  $('my-cards').innerHTML = G.myHand.length
+    ? G.myHand.map((c, i) => cardHTML(c, false, i * 90)).join('')
+    : `<div class="card-empty"></div><div class="card-empty"></div>`;
+
+  // 족보 배지
+  const hb = $('hand-badge');
+  if (!G.myHand.length || G.phase === 'idle') {
+    hb.textContent = '?'; hb.className = 'my-hand-badge hidden';
+  } else {
+    const r = evalHand([...G.myHand, ...G.comm]);
+    hb.textContent = `${r.e} ${r.n}`; hb.className = 'my-hand-badge';
+  }
+
+  // 버튼
+  renderBtns();
+}
+
+/* ─── 버튼 렌더: 위계 명확하게 ─── */
+function renderBtns() {
+  const btns = $('action-btns');
+  const bc   = $('bet-controls');
+
+  /* 게임 전/후 → 단일 CTA */
+  if (G.phase === 'idle' || G.phase === 'showdown') {
+    bc.style.display = 'none';
+    btns.innerHTML = `<button class="btn-action primary" id="btn-deal">
+      ${G.phase === 'idle' ? '🎴 게임 시작' : '🎴 다음 라운드'}
+    </button>`;
+    $('btn-deal').onclick = startRound;
+    return;
+  }
+
+  /* AI 생각 중 */
+  if (G.aiThinking) {
+    bc.style.display = 'none';
+    btns.innerHTML = `<div class="action-status">⏳ AI 생각 중...</div>`;
+    return;
+  }
+
+  /* ★ 베팅 완료 → 다음 단계 버튼
+     myAllIn/myFold보다 먼저 체크해야 함.
+     올인 후 AI가 콜하면 bettingDone=true + myAllIn=true가 동시에 성립하는데,
+     myAllIn 체크가 먼저 걸리면 "다음" 버튼이 안 나오는 버그가 있었음 */
+  if (G.bettingDone) {
+    bc.style.display = 'none';
+    const label = { preflop:'플랍 보기', flop:'턴 보기', turn:'리버 보기', river:'쇼다운' }[G.phase] || '다음';
+    btns.innerHTML = `<button class="btn-action primary" id="btn-next-phase">
+      ➡️ ${label}
+    </button>`;
+    $('btn-next-phase').onclick = actNext;
+    return;
+  }
+
+  /* 폴드 또는 올인 완료 → 대기 메시지 */
+  if (G.myFold || G.myAllIn) {
+    bc.style.display = 'none';
+    btns.innerHTML = `<div class="action-status">
+      ${G.myFold ? '폴드했어요.' : '올인! 결과를 기다리는 중...'}
+    </div>`;
+    return;
+  }
+
+  /* 내 차례: 베팅 버튼 - 위계 적용 */
+  if (G.myTurn) {
+    bc.style.display = 'flex';
+    bc.style.flexDirection = 'column';
+    bc.style.gap = '8px';
+
+    // 슬라이더 범위
+    const sl = $('bet-slider');
+    sl.max = G.myChips;
+    if (parseInt(sl.value) > G.myChips) sl.value = G.myChips;
+    if (parseInt(sl.value) < BB) sl.value = Math.min(BB, G.myChips);
+    $('bet-amount').textContent = sl.value;
+
+    const diff     = G.currentBet - G.myBet;
+    const canCheck = diff <= 0;
+
+    // 버튼 위계:
+    // DANGER(폴드) | CONSTRUCTIVE(체크/콜) | NEUTRAL(레이즈) | ALLIN
+    btns.innerHTML = `
+      <button class="btn-action danger"       id="btn-fold">🏳 폴드</button>
+      ${canCheck
+        ? `<button class="btn-action constructive" id="btn-check">✋ 체크</button>`
+        : `<button class="btn-action constructive" id="btn-call">📞 콜 +${Math.min(diff,G.myChips)}</button>`
+      }
+      <button class="btn-action neutral"      id="btn-raise">📈 레이즈</button>
+      <button class="btn-action allin"        id="btn-allin">🔥 올인</button>
+    `;
+
+    $('btn-fold').onclick  = actFold;
+    ($('btn-check') || $('btn-call')).onclick = canCheck ? actCheck : actCall;
+    $('btn-raise').onclick = () => actRaise(parseInt($('bet-slider').value) || BB);
+    $('btn-allin').onclick = actAllIn;
+    return;
+  }
+
+  bc.style.display = 'none';
+  btns.innerHTML = `<div class="action-status">⏳ 대기 중...</div>`;
+}
+
+/* ─── 카드 HTML ─── */
+function cardHTML(card, faceDown, delay = 0, flip = false) {
+  if (!card || faceDown) {
+    return `<div class="card face-down" style="animation-delay:${delay}ms">
+      <div class="card-inner"><div class="card-face card-back">🂠</div></div>
+    </div>`;
+  }
+  const rc = RED.has(card.suit) ? 'red' : '';
+  const fc = flip ? 'flip-in' : '';
+  // 실제 카드처럼: 좌상단 숫자+무늬, 가운데 큰 무늬, 우하단 뒤집힌 숫자+무늬
+  return `<div class="card ${fc}" style="animation-delay:${delay}ms">
+    <div class="card-inner">
+      <div class="card-face card-back">🂠</div>
+      <div class="card-face card-front ${rc}">
+        <span class="card-tl">${card.rank}<small>${card.suit}</small></span>
+        <span class="card-mid">${card.suit}</span>
+        <span class="card-br">${card.rank}<small>${card.suit}</small></span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════
+   결과 모달
+═══════════════════════════════════ */
+function showResult(result, em, title, sub, chipChange, rows) {
+  $('result-emoji').textContent = em;
+  $('result-title').textContent = title;
+  $('result-chip').textContent  = `${chipChange >= 0 ? '+' : ''}${chipChange.toLocaleString()} 칩`;
+  $('result-rows').innerHTML    = rows.map(r => `
+    <div class="result-row">
+      <div>
+        <div class="result-row-name">${r.nm}</div>
+        <div class="result-row-hand">${r.hd}</div>
+      </div>
+      ${r.w ? '<div class="result-row-win">🏆</div>' : ''}
+    </div>`).join('');
+  if (sub) $('result-rows').innerHTML +=
+    `<div style="font-size:.76rem;color:var(--text-2);padding:4px 0">${sub}</div>`;
+  $('result-card').className     = `result-card ${result}`;
+  $('result-overlay').className  = 'result-overlay show';
+  if (result === 'win') confetti();
+  render();
+}
+
+/* ═══════════════════════════════════
+   통계 (원본 보존)
+═══════════════════════════════════ */
+function saveStat(result, chipChange, myBest, aiBest, myH, aiH) {
+  if (result==='win') G.stats.w++;
+  else if (result==='lose') G.stats.l++;
+  else G.stats.d++;
+  G.stats.profit += chipChange;
+  G.stats.hist.unshift({ result, chipChange, myBest, aiBest, myH, aiH, ts: Date.now() });
+  if (G.stats.hist.length > 50) G.stats.hist.pop();
+  localStorage.setItem('hc_s', JSON.stringify(G.stats));
+  renderStats();
+}
+function renderStats() {
+  $('stat-w').textContent = G.stats.w;
+  $('stat-l').textContent = G.stats.l;
+  $('stat-d').textContent = G.stats.d;
+  const p = G.stats.profit;
+  $('stat-p').textContent  = `${p >= 0 ? '+' : ''}${p.toLocaleString()}`;
+  $('stat-p').style.color  = p >= 0 ? 'var(--green-lt)' : 'var(--red-lt)';
+  const hl = $('history-list');
+  if (!G.stats.hist.length) {
+    hl.innerHTML = '<div style="text-align:center;color:var(--text-2);padding:14px;font-size:.8rem">기록 없음</div>';
+    return;
+  }
+  hl.innerHTML = G.stats.hist.slice(0, 20).map(h => {
+    const cls = h.result==='win' ? 'win' : h.result==='lose' ? 'lose' : 'draw';
+    const ic  = h.result==='win' ? '🏆' : h.result==='lose' ? '💧' : '🤝';
+    const sg  = h.chipChange >= 0 ? '+' : '';
+    return `<div class="h-item ${cls}">
+      <span>${ic}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.myBest}</span>
+      <span class="h-chip">${sg}${h.chipChange}</span>
+      <span class="h-sub">vs ${h.aiBest}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════
+   Confetti
+═══════════════════════════════════ */
+function confetti() {
+  const C = ['#c8923a','#ff69b4','#00ced1','#ff6347','#9b59b6','#2ecc71'];
+  for (let i = 0; i < 80; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `left:${Math.random()*100}vw;background:${C[Math.floor(Math.random()*C.length)]};animation-duration:${1.5+Math.random()*2}s;animation-delay:${Math.random()*.7}s;width:${5+Math.random()*10}px;height:${5+Math.random()*10}px;border-radius:${Math.random()>.5?'50%':'3px'}`;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+}
+
+/* ═══════════════════════════════════
+   보조 패널 토글 (족보 / 전적)
+   하나 열면 다른 것 닫힘
+═══════════════════════════════════ */
+function togglePanel(id) {
+  const panels = ['panel-guide', 'panel-stats'];
+  panels.forEach(pid => {
+    const el  = $(pid);
+    const btn = $(`btn-${pid.replace('panel-','')+'-toggle'}`);
+    if (pid === id) {
+      const isOpen = el.classList.contains('open');
+      el.classList.toggle('open', !isOpen);
+      if (btn) btn.classList.toggle('active', !isOpen);
+    } else {
+      el.classList.remove('open');
+      if (btn) btn.classList.remove('active');
+    }
+  });
+}
+
+/* ═══════════════════════════════════
+   WebSocket (멀티플레이)
+═══════════════════════════════════ */
+function connectWS(cb) {
+  if (G.ws && G.ws.readyState === WebSocket.OPEN) { cb && cb(); return; }
+  G.ws = new WebSocket(WS_URL);
+  G.ws.onopen    = () => { cb && cb(); };
+  G.ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch { return; } onWS(m); };
+  G.ws.onclose   = () => toast('서버 연결 끊김. 새로고침 해주세요.', 'err');
+  G.ws.onerror   = () => toast('서버 연결 실패.', 'err');
+}
+function wsSend(obj) {
+  if (G.ws && G.ws.readyState === WebSocket.OPEN) G.ws.send(JSON.stringify(obj));
+}
+
+function onWS(msg) {
+  switch (msg.type) {
+
+    case 'ROOM_LIST':
+      renderRoomList(msg.rooms);
+      break;
+
+    case 'ROOM_JOINED':
+      G.playerId = msg.playerId;
+      G.roomId   = msg.roomId;
+      $('waiting-room-code').textContent = msg.roomId;
+      showScreen('screen-waiting');
+      break;
+
+    case 'LOBBY_STATE':
+      G.isHost = msg.state.hostId === G.playerId;
+      renderWaitingRoom(msg.state);
+      break;
+
+    case 'GAME_STATE':
+      G.multiState = msg.state;
+      renderMultiGame(msg.state);
+      break;
+
+    case 'ERROR':
+      toast(msg.message, 'err');
+      break;
+  }
+}
+
+/* ─── 로비: 방 목록 렌더 ─── */
+function renderRoomList(rooms) {
+  const el = $('room-list-area');
+  if (!rooms.length) {
+    el.innerHTML = '<div class="room-empty">열린 방이 없어요. 방을 만드세요!</div>';
+    return;
+  }
+  el.innerHTML = `<div class="room-list">` +
+    rooms.map(r => `
+      <div class="room-item">
+        <div>
+          <div class="room-item-code">${r.roomId}</div>
+          <div class="room-item-meta">방장: ${r.hostName}</div>
+        </div>
+        <div class="room-item-right">
+          <span class="room-count">👥 ${r.playerCount}/${r.maxPlayers}</span>
+          <button class="btn-join-room" onclick="joinRoom('${r.roomId}')">입장</button>
+        </div>
+      </div>`).join('') +
+    `</div>`;
+}
+
+/* ─── 대기실: 참가자 렌더 ─── */
+function renderWaitingRoom(lobby) {
+  const { players, hostId } = lobby;
+  const MAX = 5;
+
+  // 참가자 수
+  $('waiting-player-count').textContent = `${players.length} / ${MAX}`;
+
+  // 좌석 그리드
+  let html = players.map(p => {
+    const isMe   = p.id === G.playerId;
+    const isHost = p.id === hostId;
+    let cls = 'player-slot occupied';
+    if (isMe)   cls += ' me';
+    if (isHost) cls += ' host';
+    return `<div class="${cls}">
+      <div class="player-slot-avatar">${p.avatar || '🎩'}</div>
+      <div class="player-slot-name">${p.name}</div>
+      <div>
+        ${isHost ? '<span class="player-slot-tag tag-host">방장</span>' : ''}
+        ${isMe   ? '<span class="player-slot-tag tag-me">나</span>'   : ''}
+      </div>
+    </div>`;
+  }).join('');
+  for (let i = players.length; i < MAX; i++) {
+    html += `<div class="player-slot empty">
+      <div class="player-slot-avatar" style="opacity:.3">🎰</div>
+      <div class="player-slot-tag tag-empty">빈 자리</div>
+    </div>`;
+  }
+  $('players-grid').innerHTML = html;
+
+  // 상태 텍스트
+  $('waiting-status').textContent = players.length < 2
+    ? `친구를 기다리는 중... (${players.length}명 참가)`
+    : `${players.length}명 참가 · 방장이 게임을 시작하면 시작돼요!`;
+
+  // 시작 버튼
+  const startBtn = $('btn-start-game');
+  startBtn.disabled = !(hostId === G.playerId && players.length >= 2);
+  startBtn.textContent = hostId === G.playerId
+    ? `🎴 게임 시작 (${players.length}명)`
+    : '⏳ 방장이 시작하기를 기다리는 중...';
+}
+
+/* ─── 멀티 게임 렌더 ─── */
+function renderMultiGame(s) {
+  showScreen('screen-game');
+  G.mode = 'multi';
+
+  // ★ 서버에서 받은 남은 시간으로 타이머 동기화
+  // 내 턴이거나 게임 진행 중이면 타이머 갱신
+  if (s.phase !== 'showdown' && s.phase !== 'idle' && s.phase !== 'lobby') {
+    const timeLeft = s.turnTimeLeft ?? 30;
+    const totalSec = 30; // TURN_TIMEOUT / 1000
+    stopTimer();
+    const f = $('timer-fill');
+    let remaining = timeLeft;
+    f.style.transition = 'none';
+    const pct = Math.max(0, (remaining / totalSec) * 100);
+    f.style.width = pct + '%';
+    f.className = `timer-fill ${pct < 30 ? 'danger' : pct < 60 ? 'warn' : ''}`;
+    G.timerID = setInterval(() => {
+      remaining--;
+      const p = Math.max(0, (remaining / totalSec) * 100);
+      f.style.transition = 'width 1s linear';
+      f.style.width = p + '%';
+      f.className = `timer-fill ${p < 30 ? 'danger' : p < 60 ? 'warn' : ''}`;
+      if (remaining <= 0) stopTimer();
+    }, 1000);
+  } else if (s.phase === 'showdown') {
+    stopTimer();
+  }
+
+  // 헤더 배지
+  $('game-mode-badge').textContent = '멀티';
+  $('game-mode-badge').className   = 'game-mode-badge multi';
+  const rcEl = $('game-room-code');
+  rcEl.textContent = G.roomId || '';
+  rcEl.style.display = 'block';
+
+  // 팟/칩
+  $('pot-display').textContent  = s.pot.toLocaleString();
+  const me = s.players[s.myIdx];
+  if (me) $('chip-display').textContent = me.chips.toLocaleString();
+
+  // 페이즈 바
+  const pi = PH_IDS.indexOf(s.phase);
+  $('phase-strip').innerHTML = PH_IDS.map((p, i) => {
+    const cls = i < pi ? 'done' : i === pi ? 'active' : '';
+    const sep = i < PH_IDS.length - 1 ? '<div class="phase-sep"></div>' : '';
+    return `<div class="phase-node ${cls}">${PH_KO[i]}</div>${sep}`;
+  }).join('');
+
+  // 배너
+  const bn = $('action-banner');
+  if (s.isMyTurn && me && !me.folded) {
+    bn.textContent = '⚡ 내 차례입니다'; bn.className = 'action-banner my-turn';
+  } else {
+    const actor = s.players[s.currentIdx];
+    bn.textContent = actor ? `${actor.name}의 차례...` : '';
+    bn.className = 'action-banner ai-turn';
+  }
+
+  // 상대방 좌석
+  $('opponents-row').innerHTML = s.players.filter((_, i) => i !== s.myIdx).map(p => {
+    const isTurn = s.players.indexOf(p) === s.currentIdx;
+    const cards  = p.hand.map(c => c
+      ? `<div class="mc open ${RED.has(c.suit)?'red':''}">${c.rank}</div>`
+      : `<div class="mc">?</div>`).join('');
+    return `<div class="opponent-card ${isTurn?'is-turn':''} ${p.folded?'folded':''} ${p.allIn?'allin':''}">
+      <div class="opp-avatar">${p.avatar || '🎩'}</div>
+      <div class="opp-name">${p.name}</div>
+      <div class="opp-chips">🪙 ${p.chips.toLocaleString()}</div>
+      ${p.bet > 0 ? `<div class="opp-bet">베팅 ${p.bet}</div>` : ''}
+      <div class="opp-mini-cards">${cards}</div>
+      ${p.folded ? '<div class="opp-status-tag">FOLD</div>' : p.allIn ? '<div class="opp-status-tag">ALL-IN</div>' : ''}
+    </div>`;
+  }).join('');
+
+  // 커뮤니티
+  let ch = s.community.map((c, i) => cardHTML(c, false, i*100)).join('');
+  for (let i = s.community.length; i < 5; i++) ch += `<div class="card-empty"></div>`;
+  $('community-cards').innerHTML = ch;
+
+  // 내 카드
+  if (me && me.hand.length)
+    $('my-cards').innerHTML = me.hand.map((c, i) => cardHTML(c, false, i*90)).join('');
+
+  // 버튼
+  renderMultiBtns(s);
+
+  // 결과
+  if (s.phase === 'showdown' && s.lastRoundResult) showMultiResult(s);
+}
+
+function renderMultiBtns(s) {
+  const btns = $('action-btns');
+  const bc   = $('bet-controls');
+  const me   = s.players[s.myIdx];
+
+  if (!me || s.phase === 'showdown') {
+    bc.style.display = 'none';
+    btns.innerHTML = `<button class="btn-action primary" ${!G.isHost?'disabled':''} id="btn-multi-next">
+      ${G.isHost ? '🎴 다음 라운드' : '⏳ 방장 대기 중...'}
+    </button>`;
+    $('btn-multi-next')?.addEventListener('click', () => {
+      if (G.isHost) wsSend({ type: 'NEXT_ROUND' });
+    });
+    return;
+  }
+  if (!s.isMyTurn || me.folded || me.allIn) {
+    bc.style.display = 'none';
+    btns.innerHTML = `<div class="action-status">${me.folded ? '폴드했어요.' : me.allIn ? '올인! 대기 중...' : '상대방 차례...'}</div>`;
+    return;
+  }
+  bc.style.display = 'flex'; bc.style.flexDirection = 'column'; bc.style.gap = '8px';
+  const sl = $('bet-slider');
+  sl.max = me.chips;
+  sl.value = Math.min(parseInt(sl.value) || BB, me.chips);
+  $('bet-amount').textContent = sl.value;
+  const diff = s.currentBet - me.bet;
+  btns.innerHTML = `
+    <button class="btn-action danger"       id="mf">🏳 폴드</button>
+    ${diff <= 0
+      ? `<button class="btn-action constructive" id="mc">✋ 체크</button>`
+      : `<button class="btn-action constructive" id="mc">📞 콜 +${Math.min(diff,me.chips)}</button>`
+    }
+    <button class="btn-action neutral"      id="mr">📈 레이즈</button>
+    <button class="btn-action allin"        id="ma">🔥 올인</button>`;
+  $('mf').onclick = () => wsSend({ type:'ACTION', action:'fold' });
+  $('mc').onclick = () => wsSend({ type:'ACTION', action: diff<=0?'check':'call' });
+  $('mr').onclick = () => wsSend({ type:'ACTION', action:'raise', amount: parseInt($('bet-slider').value)||BB });
+  $('ma').onclick = () => wsSend({ type:'ACTION', action:'allin' });
+}
+
+function showMultiResult(s) {
+  const res = s.lastRoundResult;
+  const me  = s.players[s.myIdx];
+  const myPW = res.payouts?.find(pw => pw.player.id === G.playerId);
+  const isWin = !!myPW;
+  $('result-emoji').textContent = isWin ? '🎉' : '😢';
+  $('result-title').textContent = isWin ? '승리!' : '패배...';
+  $('result-rows').innerHTML = (res.allResults || []).map(r => `
+    <div class="result-row">
+      <div>
+        <div class="result-row-name">${r.player.name}</div>
+        <div class="result-row-hand">${r.result?.emoji||''} ${r.result?.name||'?'}</div>
+      </div>
+      ${res.payouts?.find(pw=>pw.player.id===r.player.id) ? '<div class="result-row-win">🏆</div>' : ''}
+    </div>`).join('');
+  const loss = me?.totalBet || 0;
+  $('result-chip').textContent = myPW
+    ? `+${myPW.amount.toLocaleString()} 칩`
+    : `-${loss.toLocaleString()} 칩`;
+  $('result-card').className    = `result-card ${isWin ? 'win' : 'lose'}`;
+  $('result-overlay').className = 'result-overlay show';
+  if (isWin) confetti();
+  $('btn-next-round').onclick = () => {
+    $('result-overlay').className = 'result-overlay';
+    if (G.isHost) wsSend({ type: 'NEXT_ROUND' });
+  };
+}
+
+/* ═══════════════════════════════════
+   이벤트 바인딩
+═══════════════════════════════════ */
+function bind() {
+
+  /* 홈 */
+  $('btn-solo').onclick = () => {
+    let name = G.name || localStorage.getItem('hc_name') || '';
+    if (!name) {
+      name = (prompt('닉네임을 입력하세요 (최대 10자)', '플레이어') || '플레이어').slice(0, 10);
+      G.name = name; localStorage.setItem('hc_name', name);
+    }
+    G.name = name;
+    G.mode = 'solo'; G.myChips = START; G.phase = 'idle'; G.round = 0;
+    $('game-mode-badge').textContent = '솔로';
+    $('game-mode-badge').className   = 'game-mode-badge solo';
+    $('game-room-code').style.display = 'none';
+    showScreen('screen-game');
+    render(); renderStats();
+  };
+
+  $('btn-multi').onclick = () => {
+    let name = G.name || localStorage.getItem('hc_name') || '';
+    if (!name) {
+      name = (prompt('닉네임을 입력하세요 (최대 10자)', '플레이어') || '플레이어').slice(0, 10);
+      G.name = name; localStorage.setItem('hc_name', name);
+    }
+    G.name = name;
+    showScreen('screen-lobby');
+    connectWS(() => wsSend({ type: 'LIST_ROOMS' }));
+  };
+
+  /* 로비 */
+  $('lobby-back').onclick = () => showScreen('screen-home');
+
+  $('btn-create-room').onclick = () => {
+    if (!G.name) { toast('닉네임을 입력하세요.', 'warn'); return; }
+    G.isHost = true;
+    wsSend({ type: 'CREATE_ROOM', playerName: G.name });
+  };
+
+  $('btn-join-code').onclick = () =>
+    joinRoom($('input-room-code').value);
+  $('input-room-code').onkeydown = e => {
+    if (e.key === 'Enter') joinRoom($('input-room-code').value);
+  };
+
+  $('btn-refresh-rooms').onclick = () => wsSend({ type: 'LIST_ROOMS' });
+
+  /* 대기실 */
+  $('waiting-back').onclick = () => {
+    wsSend({ type: 'LEAVE_ROOM' });
+    G.roomId = null;
+    showScreen('screen-lobby');
+    wsSend({ type: 'LIST_ROOMS' });
+  };
+  $('btn-leave-room').onclick = () => {
+    wsSend({ type: 'LEAVE_ROOM' });
+    G.roomId = null;
+    showScreen('screen-lobby');
+    wsSend({ type: 'LIST_ROOMS' });
+  };
+  $('btn-start-game').onclick = () =>
+    wsSend({ type: 'START_GAME', mode: 'multi' });
+  $('btn-copy-code').onclick = () => {
+    const code = $('waiting-room-code').textContent;
+    navigator.clipboard?.writeText(code).then(() => {
+      const btn = $('btn-copy-code');
+      btn.textContent = '✅ 복사됨!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '📋 복사';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  };
+
+  /* 게임 */
+  $('game-back').onclick = () => {
+    stopTimer();
+    G.phase = 'idle'; G.mode = 'solo';
+    if (G.ws) { wsSend({ type: 'LEAVE_ROOM' }); G.roomId = null; }
+    showScreen('screen-home');
+  };
+  $('btn-guide-toggle').onclick = () => togglePanel('panel-guide');
+  $('btn-stats-toggle').onclick  = () => togglePanel('panel-stats');
+
+  /* 슬라이더 */
+  $('bet-slider').oninput = e => $('bet-amount').textContent = e.target.value;
+
+  /* 프리셋 베팅 */
+  document.querySelectorAll('.btn-preset').forEach(b => {
+    b.onclick = () => {
+      const sl  = $('bet-slider');
+      const pot = G.mode === 'solo' ? G.pot : (G.multiState?.pot || 50);
+      if (b.dataset.allin) {
+        const chips = G.mode === 'solo'
+          ? G.myChips
+          : (G.multiState?.players[G.multiState?.myIdx]?.chips || 0);
+        sl.value = chips;
+      } else {
+        sl.value = Math.min(Math.floor(pot * parseFloat(b.dataset.mul)), parseInt(sl.max));
+      }
+      if (parseInt(sl.value) < BB) sl.value = Math.min(BB, parseInt(sl.max));
+      $('bet-amount').textContent = sl.value;
+    };
+  });
+
+  /* 결과 모달 */
+  $('btn-next-round').onclick = () => {
+    $('result-overlay').className = 'result-overlay';
+    G.phase = 'idle';
+    render();
+  };
+
+  /* ESC */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      ['panel-guide', 'panel-stats'].forEach(id => {
+        $(id).classList.remove('open');
+      });
+      $('btn-guide-toggle').classList.remove('active');
+      $('btn-stats-toggle').classList.remove('active');
+    }
+  });
+}
+
+function joinRoom(code) {
+  if (!code?.trim()) { toast('방 코드를 입력하세요.', 'warn'); return; }
+  wsSend({ type: 'JOIN_ROOM', roomId: code.toUpperCase(), playerName: G.name });
+}
+
+/* ═══════════════════════════════════
+   초기화
+═══════════════════════════════════ */
+function init() {
+  G.name = localStorage.getItem('hc_name') || '';
+  bind();
+  renderStats();
+  render(); // game-screen 초기 상태 설정 (idle)
+}
+init();
+</script>
+</body>
+</html>

@@ -11,6 +11,9 @@
  * 3. 생성된 URL (예: wss://holdem-xxx.onrender.com) 을 client의 WS_URL에 입력
  */
 
+const http = require('http');
+const path = require('path');
+const express = require('express');
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const { GameRoom, MAX_PLAYERS } = require('./gameEngine');
@@ -19,9 +22,15 @@ const PORT  = process.env.PORT || 8080;
 const rooms = new Map();       // roomId → GameRoom
 const clients = new Map();     // ws → { playerId, roomId, playerName }
 
-const wss = new WebSocket.Server({ port: PORT });
+const app = express();
+app.use(express.static(path.join(__dirname, 'public')));
 
-console.log(`🃏 Texas Hold'em WebSocket Server running on port ${PORT}`);
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+server.listen(PORT, () => {
+  console.log(`🃏 Texas Hold'em WebSocket Server running on port ${PORT}`);
+});
 
 // ─── 연결 처리 ────────────────────────────────────────────
 wss.on('connection', (ws) => {
@@ -269,4 +278,4 @@ setInterval(() => {
   });
 }, 5 * 60 * 1000);
 
-module.exports = wss;
+module.exports = { wss, server };
