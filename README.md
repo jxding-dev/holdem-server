@@ -28,7 +28,7 @@ holdem3/
 
 ## 배포 방법
 
-### 1단계: WebSocket 서버 (Render.com 무료)
+### WebSocket 서버 (Render.com 무료)
 
 1. GitHub에 `server/` 폴더 업로드
 2. [Render.com](https://render.com) → New Web Service
@@ -36,22 +36,6 @@ holdem3/
 4. 생성된 URL 확인 (예: `https://holdem-xxx.onrender.com`)
 5. WebSocket URL: `wss://holdem-xxx.onrender.com`
 
-### 2단계: 클라이언트 (닷홈)
-
-1. `client/index.html` 열기
-2. 상단 `WS_URL` 변수를 실제 서버 주소로 변경:
-   ```js
-   return 'wss://holdem-xxx.onrender.com';
-   ```
-3. `index.html` + `.htaccess` (별도 제공)를 닷홈 `public_html`에 업로드
-4. 브라우저에서 접속
-
-### .htaccess (닷홈용)
-```
-AddType application/javascript .js
-AddDefaultCharset UTF-8
-DirectoryIndex index.html
-```
 
 ---
 
